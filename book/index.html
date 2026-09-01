@@ -2433,6 +2433,10 @@
     </div>
 
     <script>
+        // Shared backend config — override via window.HBS_BACKEND_URL before this script runs.
+        window.HBS_BACKEND_URL = (window.HBS_BACKEND_URL || 'https://hb-booking.hibiscusstudiouk.workers.dev').replace(/\/$/, '');
+        const HBS_BACKEND_URL = window.HBS_BACKEND_URL;
+
         // ===== LIGHTWEIGHT TRACKING (3 events only) =====
         // Configure: Set WEBHOOK_URL to your Google Sheet webhook
         const WEBHOOK_URL = ''; // Leave empty to disable tracking
@@ -2882,7 +2886,7 @@
             return Promise.all(
                 dates.map(async d => {
                     try {
-                        const response = await fetch(`https://hb-booking.nicholasfcoker.workers.dev/api/availability?date=${d.date}`);
+                        const response = await fetch(`https://hb-booking.hibiscusstudiouk.workers.dev/api/availability?date=${d.date}`);
                         const data = await response.json();
                         const hasAvailableSlot = data.slots?.some(slot => slot.available);
                         return { ...d, hasAvailableSlot };
@@ -3031,7 +3035,7 @@
             const availabilityChecks = await Promise.all(
                 dates.map(async d => {
                     try {
-                        const response = await fetch(`https://hb-booking.nicholasfcoker.workers.dev/api/availability?date=${d.date}`);
+                        const response = await fetch(`https://hb-booking.hibiscusstudiouk.workers.dev/api/availability?date=${d.date}`);
                         const data = await response.json();
                         // A date is available if it has at least one available slot
                         const hasAvailableSlot = data.slots?.some(slot => slot.available);
@@ -3274,7 +3278,7 @@
                 guestCount: 1,
                 notes: ''
             };
-            fetch('https://hb-booking.nicholasfcoker.workers.dev/api/bookings', {
+            fetch(`${HBS_BACKEND_URL}/api/bookings`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(viewingData)
@@ -3462,7 +3466,7 @@
 
             try {
                 const response = await fetch(
-                    `https://hb-booking.nicholasfcoker.workers.dev/api/availability?date=${date}&duration=${duration}`
+                    `${HBS_BACKEND_URL}/api/availability?date=${date}&duration=${duration}`
                 );
                 if (!response.ok) throw new Error('Availability check failed');
                 const data = await response.json();
@@ -3768,22 +3772,74 @@
         function showConfirmation() {
             track('cta_click'); // Track: clicked book button
 
-            // Guard: integration.js must be loaded for real payment processing
-            if (!window._integrationLoaded) {
-                alert('Payment system is loading — please try again in a moment. If this persists, contact us on Instagram @hibiscusstudiosuk');
+            if (!selectedEventType || !selectedDate || !selectedDuration || !selectedTimeStart || !selectedGuests) {
+                alert('Please complete the booking form before continuing.');
                 return;
             }
 
-            // Copy values to receipt
-            document.getElementById('receiptEvent').textContent = eventTypeLabels[selectedEventType] || '—';
-            document.getElementById('receiptDate').textContent = `${selectedDateObj.day} ${selectedDateObj.num} ${selectedDateObj.month} ${selectedDateObj.date ? selectedDateObj.date.split('-')[0] : new Date().getFullYear()}`;
-            document.getElementById('receiptTime').textContent = `${formatTime(selectedTimeStart)} → ${formatTime(selectedTimeEnd)} (${selectedDuration}hrs)`;
-            var receiptTotal = (selectedDurationPrice || 465) + extrasTotal;
-            document.getElementById('receiptDeposit').textContent = '£' + Math.ceil(receiptTotal / 2);
+            const btn = document.getElementById('reviewPayBtn');
+            const originalText = btn ? btn.textContent : 'Pay Reservation Fee';
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Processing...';
+            }
 
-            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-            document.getElementById('step9').classList.add('active');
-            document.getElementById('progressBar').style.display = 'none';
+            const bookingPayload = {
+                name: document.getElementById('inputName').value.trim(),
+                email: document.getElementById('inputEmail').value.trim(),
+                phone: document.getElementById('inputPhone').value.trim(),
+                eventType: selectedEventType,
+                date: selectedDate,
+                guestCount: selectedGuests,
+                duration: Number(selectedDuration),
+                startTime: selectedTimeStart,
+                endTime: selectedTimeEnd,
+                notes: ''
+            };
+
+            fetch(`${HBS_BACKEND_URL}/api/bookings`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bookingPayload)
+            })
+            .then(function(response) {
+                return response.json().then(function(data) {
+                    if (!response.ok) {
+                        throw new Error(data && data.message ? data.message : (data && data.error ? data.error : 'Booking failed'));
+                    }
+                    return data;
+                });
+            })
+            .then(function(data) {
+                // 50% reservation fee is collected here via Stripe checkout.
+                // The rest of the balance is sent by email and invoiced separately.
+                if (data && data.stripeCheckoutUrl) {
+                    window.location.href = data.stripeCheckoutUrl;
+                    return;
+                }
+
+                document.getElementById('receiptEvent').textContent = eventTypeLabels[selectedEventType] || '—';
+                document.getElementById('receiptDate').textContent = `${selectedDateObj.day} ${selectedDateObj.num} ${selectedDateObj.month} ${selectedDateObj.date ? selectedDateObj.date.split('-')[0] : new Date().getFullYear()}`;
+                document.getElementById('receiptTime').textContent = `${formatTime(selectedTimeStart)} → ${formatTime(selectedTimeEnd)} (${selectedDuration}hrs)`;
+                document.getElementById('receiptDeposit').textContent = `£${(data && data.hireDeposit) || (data && data.deposit) || Math.ceil(((selectedDurationPrice || 465) + extrasTotal) / 2)}`;
+
+                const successMessage = document.querySelector('#step9 .confirm-text');
+                if (successMessage) {
+                    successMessage.innerHTML = 'Your booking has been received. We have collected the 50% advance payment and will email you the remaining balance for payment.';
+                }
+
+                document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+                document.getElementById('step9').classList.add('active');
+                document.getElementById('progressBar').style.display = 'none';
+            })
+            .catch(function(err) {
+                console.error('Booking submission failed:', err);
+                alert('We could not start the payment for this booking. Please try again in a moment, or contact us on Instagram @hibiscusstudiosuk');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
+            });
         }
 
         async function goToViewing() {
@@ -3826,7 +3882,7 @@
             const remaining = total - deposit;
 
             document.querySelector('.deposit-info .amount').textContent = `£${deposit}`;
-            document.querySelector('.deposit-info .note').textContent = `Remaining £${remaining} due 7 days before your event`;
+            document.querySelector('.deposit-info .note').textContent = `£${remaining} remaining balance will be emailed to you after booking`;
             const payBtn = document.getElementById('reviewPayBtn');
             if (payBtn) payBtn.textContent = `Pay £${deposit} Reservation Fee`;
         }
@@ -3862,7 +3918,7 @@
 
             // Reset deposit display (Half-Day £465 = £233 deposit)
             document.querySelector('.deposit-info .amount').textContent = '£233';
-            document.querySelector('.deposit-info .note').textContent = 'Remaining £232 due 7 days before your event';
+            document.querySelector('.deposit-info .note').textContent = '£232 remaining balance will be emailed to you after booking';
             const payBtn = document.getElementById('reviewPayBtn');
             if (payBtn) payBtn.textContent = 'Pay £233 Reservation Fee';
 
@@ -3940,7 +3996,14 @@
     </footer>
 
     <!-- Live API Integration (with load detection) -->
-    <script>window._integrationLoaded = false;</script>
-    <script src="https://hb-booking.nicholasfcoker.workers.dev/integration.js" onload="window._integrationLoaded=true" onerror="console.warn('integration.js failed to load — payment will be blocked')"></script>
+    <script>
+        window._integrationLoaded = false;
+        window.HBS_BACKEND_URL = (window.HBS_BACKEND_URL || 'https://hb-booking.hibiscusstudiouk.workers.dev').replace(/\/$/, '');
+        const HBS_INTEGRATION_SCRIPT = document.createElement('script');
+        HBS_INTEGRATION_SCRIPT.src = `${window.HBS_BACKEND_URL}/integration.js`;
+        HBS_INTEGRATION_SCRIPT.onload = () => { window._integrationLoaded = true; };
+        HBS_INTEGRATION_SCRIPT.onerror = () => { console.warn('integration.js failed to load — payment will be blocked'); };
+        document.head.appendChild(HBS_INTEGRATION_SCRIPT);
+    </script>
 </body>
 </html>
