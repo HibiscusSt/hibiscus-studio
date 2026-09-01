@@ -2216,16 +2216,34 @@
         </div>
 
         <!-- Price breakdown -->
-        <div class="deposit-info" style="margin-top:20px;">
+        <div class="deposit-info" id="bookingPriceBreakdown" style="margin-top:20px;">
             <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; border-bottom:1px solid var(--border-color); margin-bottom:12px;">
                 <span style="color:var(--text-secondary); font-size:0.82rem;" id="summaryPriceLabel">6 hours hire</span>
                 <span style="color:var(--text-primary); font-size:0.95rem; font-family:var(--font-display);" id="summaryBasePrice">£465</span>
             </div>
-            <div class="main">
-                <span class="label">50% reservation fee</span>
-                <span class="amount">£233</span>
+            <div style="display:grid; gap:8px; font-size:0.8rem; color:var(--text-secondary);">
+                <div style="display:flex; justify-content:space-between; gap:12px;">
+                    <span>Hire subtotal</span>
+                    <span id="summaryHireSubtotal">£465</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; gap:12px;">
+                    <span>Weekend premium</span>
+                    <span id="summaryWeekendPremium">£0</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; gap:12px;">
+                    <span>Extras</span>
+                    <span id="summaryExtrasTotal">£0</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; gap:12px; padding-top:8px; border-top:1px solid var(--border-color);">
+                    <span style="color:var(--text-primary); font-weight:600;">Subtotal</span>
+                    <span style="color:var(--text-primary); font-weight:600;" id="summarySubtotal">£465</span>
+                </div>
             </div>
-            <div class="note">Remaining £232 due 7 days before your event</div>
+            <div class="main" style="margin-top:14px;">
+                <span class="label">50% reservation fee</span>
+                <span class="amount" id="summaryReservationFee">£233</span>
+            </div>
+            <div class="note" id="summaryRemainingBalance">£232 remaining balance will be emailed to you after booking</div>
         </div>
 
         <!-- What's included -->
@@ -2327,8 +2345,16 @@
                     <span class="summary-value" id="receiptTime">—</span>
                 </div>
                 <div class="summary-row">
-                    <span class="summary-label">Deposit Paid</span>
+                    <span class="summary-label">Hire subtotal</span>
+                    <span class="summary-value" id="receiptSubtotal">£0</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Reservation fee paid</span>
                     <span class="summary-value" id="receiptDeposit">£150</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Remaining balance</span>
+                    <span class="summary-value" id="receiptRemainingBalance">£0</span>
                 </div>
             </div>
         </div>
@@ -2477,26 +2503,27 @@
         };
         window.eventTypeLabels = eventTypeLabels;
 
-        // Event pricing (for bridal, private, birthday, baby, corporate)
+        // Event pricing must match the backend's live pricing tables.
+        // See src/index.js EVENT_HIRE_PRICES / WORKSHOP_PRICES / CONTENT_CREATION_PRICES.
         var eventPricing = {
-            4: { hours: 4, price: 345, label: '4 hours', desc: 'Flexi timing' },
-            6: { hours: 6, price: 465, label: '6 hours', desc: 'Half-day' },
-            8: { hours: 8, price: 645, label: '8 hours', desc: 'Flexi timing' },
-            12: { hours: 12, price: 885, label: '12 hours', desc: 'Full day (10am-10pm)' }
+            4: { hours: 4, price: 395, label: '4 hours', desc: 'Flexi timing' },
+            6: { hours: 6, price: 535, label: '6 hours', desc: 'Half-day' },
+            8: { hours: 8, price: 745, label: '8 hours', desc: 'Flexi timing' },
+            12: { hours: 12, price: 1020, label: '12 hours', desc: 'Full day (10am-10pm)' }
         };
 
-        // Workshop pricing — £60/hr, 2hr minimum
+        // Workshop pricing — backend pricing table
         var workshopPricing = {
-            2: { hours: 2, price: 120, label: '2 hours', desc: '£60/hr (2hr min)' },
-            6: { hours: 6, price: 345, label: 'Half day', desc: 'Half-day rate' },
-            12: { hours: 12, price: 645, label: 'Full day', desc: 'Full-day rate' }
+            2: { hours: 2, price: 135, label: '2 hours', desc: '£60/hr (2hr min)' },
+            6: { hours: 6, price: 385, label: 'Half day', desc: 'Half-day rate' },
+            12: { hours: 12, price: 725, label: 'Full day', desc: 'Full-day rate' }
         };
 
-        // Content creation pricing — £45/hr, 2hr minimum
+        // Content creation pricing — backend pricing table
         var contentPricing = {
-            2: { hours: 2, price: 90, label: '2 hours', desc: '£45/hr (2hr min)' },
-            6: { hours: 6, price: 250, label: 'Half day', desc: 'Half-day rate' },
-            12: { hours: 12, price: 500, label: 'Full day', desc: 'Full-day rate' }
+            2: { hours: 2, price: 130, label: '2 hours', desc: '£45/hr (2hr min)' },
+            6: { hours: 6, price: 270, label: 'Half day', desc: 'Half-day rate' },
+            12: { hours: 12, price: 540, label: 'Full day', desc: 'Full-day rate' }
         };
 
         // Get pricing tier based on event type
@@ -3720,6 +3747,24 @@
             goToStep(1);
         }
 
+        function calculateReservationQuote() {
+            const pricing = getPricingForEventType(selectedEventType);
+            const basePrice = pricing[selectedDuration]?.price || selectedDurationPrice || 465;
+            const isWeekend = selectedDateObj && ['Sat', 'Sun'].includes(selectedDateObj.day);
+            const weekendPremium = isWeekend ? Math.round(basePrice * 0.1 * 100) / 100 : 0;
+            const subtotal = basePrice + weekendPremium + extrasTotal;
+            const deposit = Math.round(subtotal * 0.5 * 100) / 100;
+            const remaining = Math.round((subtotal - deposit) * 100) / 100;
+
+            return {
+                basePrice,
+                weekendPremium,
+                subtotal,
+                deposit,
+                remaining
+            };
+        }
+
         function updateSummary() {
             const dateStr = `${selectedDateObj.day} ${selectedDateObj.num} ${selectedDateObj.month}`;
             const timeStr = `${formatTime(selectedTimeStart)} → ${formatTime(selectedTimeEnd)}`;
@@ -3733,12 +3778,16 @@
             document.getElementById('summaryEmail').textContent = document.getElementById('inputEmail').value;
             document.getElementById('summaryPhone').textContent = document.getElementById('inputPhone').value;
 
-            // Price breakdown
-            const basePrice = selectedDurationPrice || 465;
+            const quote = calculateReservationQuote();
             document.getElementById('summaryPriceLabel').textContent = `${selectedDuration || 6} hours hire`;
-            document.getElementById('summaryBasePrice').textContent = `£${basePrice}`;
+            document.getElementById('summaryBasePrice').textContent = `£${quote.basePrice}`;
+            document.getElementById('summaryHireSubtotal').textContent = `£${(quote.basePrice + quote.weekendPremium).toFixed(2)}`;
+            document.getElementById('summaryWeekendPremium').textContent = `£${quote.weekendPremium.toFixed(2)}`;
+            document.getElementById('summaryExtrasTotal').textContent = `£${extrasTotal.toFixed(2)}`;
+            document.getElementById('summarySubtotal').textContent = `£${quote.subtotal.toFixed(2)}`;
+            document.getElementById('summaryReservationFee').textContent = `£${quote.deposit.toFixed(2)}`;
+            document.getElementById('summaryRemainingBalance').textContent = `£${quote.remaining.toFixed(2)} remaining balance will be emailed to you after booking`;
 
-            // Update deposit amount with selected duration price
             updateDepositAmount();
 
             // Render event vibe content
@@ -3821,7 +3870,14 @@
                 document.getElementById('receiptEvent').textContent = eventTypeLabels[selectedEventType] || '—';
                 document.getElementById('receiptDate').textContent = `${selectedDateObj.day} ${selectedDateObj.num} ${selectedDateObj.month} ${selectedDateObj.date ? selectedDateObj.date.split('-')[0] : new Date().getFullYear()}`;
                 document.getElementById('receiptTime').textContent = `${formatTime(selectedTimeStart)} → ${formatTime(selectedTimeEnd)} (${selectedDuration}hrs)`;
-                document.getElementById('receiptDeposit').textContent = `£${(data && data.hireDeposit) || (data && data.deposit) || Math.ceil(((selectedDurationPrice || 465) + extrasTotal) / 2)}`;
+
+                const quote = calculateReservationQuote();
+                const backendDeposit = (data && (data.hireDeposit ?? data.deposit));
+                const paidDeposit = backendDeposit ?? quote.deposit;
+                const remainingBalance = quote.subtotal - paidDeposit;
+                document.getElementById('receiptSubtotal').textContent = `£${quote.subtotal.toFixed(2)}`;
+                document.getElementById('receiptDeposit').textContent = `£${paidDeposit.toFixed(2)}`;
+                document.getElementById('receiptRemainingBalance').textContent = `£${remainingBalance.toFixed(2)}`;
 
                 const successMessage = document.querySelector('#step9 .confirm-text');
                 if (successMessage) {
@@ -3874,17 +3930,29 @@
         }
 
         function updateDepositAmount() {
-            // Use selected duration price (HOOK 4: Pricing uses selected duration)
-            // Default to Half-Day (6hr = £465) if no duration selected yet
-            const basePrice = selectedDurationPrice || 465;
-            const total = basePrice + extrasTotal;
-            const deposit = Math.ceil(total / 2);
-            const remaining = total - deposit;
+            const quote = calculateReservationQuote();
+            const deposit = quote.deposit;
+            const remaining = quote.remaining;
 
-            document.querySelector('.deposit-info .amount').textContent = `£${deposit}`;
-            document.querySelector('.deposit-info .note').textContent = `£${remaining} remaining balance will be emailed to you after booking`;
+            const amountEl = document.querySelector('.deposit-info .amount');
+            const noteEl = document.querySelector('.deposit-info .note');
+            if (amountEl) amountEl.textContent = `£${deposit.toFixed(2)}`;
+            if (noteEl) noteEl.textContent = `£${remaining.toFixed(2)} remaining balance will be emailed to you after booking`;
             const payBtn = document.getElementById('reviewPayBtn');
-            if (payBtn) payBtn.textContent = `Pay £${deposit} Reservation Fee`;
+            if (payBtn) payBtn.textContent = `Pay £${deposit.toFixed(2)} Reservation Fee`;
+
+            const hireSubtotalEl = document.getElementById('summaryHireSubtotal');
+            const weekendPremiumEl = document.getElementById('summaryWeekendPremium');
+            const extrasTotalEl = document.getElementById('summaryExtrasTotal');
+            const subtotalEl = document.getElementById('summarySubtotal');
+            const reservationFeeEl = document.getElementById('summaryReservationFee');
+            const remainingBalanceEl = document.getElementById('summaryRemainingBalance');
+            if (hireSubtotalEl) hireSubtotalEl.textContent = `£${(quote.basePrice + quote.weekendPremium).toFixed(2)}`;
+            if (weekendPremiumEl) weekendPremiumEl.textContent = `£${quote.weekendPremium.toFixed(2)}`;
+            if (extrasTotalEl) extrasTotalEl.textContent = `£${extrasTotal.toFixed(2)}`;
+            if (subtotalEl) subtotalEl.textContent = `£${quote.subtotal.toFixed(2)}`;
+            if (reservationFeeEl) reservationFeeEl.textContent = `£${quote.deposit.toFixed(2)}`;
+            if (remainingBalanceEl) remainingBalanceEl.textContent = `£${quote.remaining.toFixed(2)} remaining balance will be emailed to you after booking`;
         }
 
         function startOver() {
@@ -3928,8 +3996,17 @@
 
         // ===== CLOUDFLARE TURNSTILE (INVISIBLE BOT PROTECTION) =====
 
-        // Initialize Turnstile on page load
+        // Initialize Turnstile on page load.
+        // Localhost preview is not a valid Turnstile domain, so bypass it there while leaving the live site protected.
+        const isLocalPreview = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+
         window.addEventListener('load', function() {
+            if (isLocalPreview) {
+                console.info('Local preview detected; bypassing Turnstile validation.');
+                window.turnstileFailed = true;
+                return;
+            }
+
             // Only initialize if turnstile is loaded
             if (typeof turnstile !== 'undefined') {
                 turnstile.render('#turnstile-widget', {
@@ -3955,7 +4032,7 @@
 
         // Submit with Turnstile verification (with timeout fallback)
         function submitWithTurnstile() {
-            if (window.turnstileToken || window.turnstileFailed) {
+            if (isLocalPreview || window.turnstileToken || window.turnstileFailed) {
                 // Token verified or Turnstile unavailable — proceed to review
                 goToStep(8);
             } else if (typeof turnstile !== 'undefined' && turnstile.execute) {
