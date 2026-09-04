@@ -2755,10 +2755,8 @@
         var step2MonthYear = currentYear;
 
         function initStep2MonthGrid() {
-            // Start showing from NEXT month (current month is likely over or nearly over)
-            const startFromMonth = currentMonth + 1;
-            const startFromYear = startFromMonth > 11 ? currentYear + 1 : currentYear;
-            step2MonthYear = startFromYear;
+            // Include the current month in the booking flow so customers can book immediately.
+            step2MonthYear = currentYear;
             renderStep2MonthGrid();
         }
 
@@ -2767,8 +2765,8 @@
             document.getElementById('step2MonthPageLabel').textContent = step2MonthYear;
             document.getElementById('step2MonthPrevBtn').disabled = step2MonthYear <= currentYear;
 
-            // For current year, start from next month; for future years, show all
-            const startMonth = step2MonthYear === currentYear ? currentMonth + 1 : 0;
+            // Include the current month and all future months in the current year.
+            const startMonth = step2MonthYear === currentYear ? currentMonth : 0;
 
             let html = '';
             for (let i = startMonth; i < 12; i++) {
@@ -3997,16 +3995,7 @@
         // ===== CLOUDFLARE TURNSTILE (INVISIBLE BOT PROTECTION) =====
 
         // Initialize Turnstile on page load.
-        // Localhost preview is not a valid Turnstile domain, so bypass it there while leaving the live site protected.
-        const isLocalPreview = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
-
         window.addEventListener('load', function() {
-            if (isLocalPreview) {
-                console.info('Local preview detected; bypassing Turnstile validation.');
-                window.turnstileFailed = true;
-                return;
-            }
-
             // Only initialize if turnstile is loaded
             if (typeof turnstile !== 'undefined') {
                 turnstile.render('#turnstile-widget', {
@@ -4032,7 +4021,7 @@
 
         // Submit with Turnstile verification (with timeout fallback)
         function submitWithTurnstile() {
-            if (isLocalPreview || window.turnstileToken || window.turnstileFailed) {
+            if (window.turnstileToken || window.turnstileFailed) {
                 // Token verified or Turnstile unavailable — proceed to review
                 goToStep(8);
             } else if (typeof turnstile !== 'undefined' && turnstile.execute) {
