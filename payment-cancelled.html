@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment Cancelled | Hibiscus Studio</title>
+  <style>
+    :root {
+      --bg: #141210;
+      --panel: #1e1b18;
+      --panel-2: #252220;
+      --text: #f0ece4;
+      --muted: #c4bfb6;
+      --accent: #d4848f;
+      --accent-soft: rgba(212, 132, 143, 0.18);
+      --warning: #c9944a;
+      --border: #2e2a25;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+    .card {
+      width: min(640px, 100%);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 42px 28px;
+      text-align: center;
+      box-shadow: 0 24px 70px rgba(0,0,0,0.25);
+    }
+    .badge {
+      width: 86px;
+      height: 86px;
+      margin: 0 auto 22px;
+      border-radius: 50%;
+      background: var(--warning);
+      display: grid;
+      place-items: center;
+      font-size: 42px;
+      line-height: 1;
+    }
+    h1 {
+      margin: 0 0 14px;
+      font-size: clamp(2rem, 3vw, 3rem);
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: 400;
+    }
+    p {
+      margin: 10px 0;
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 1.02rem;
+    }
+    .ref {
+      display: inline-block;
+      margin-top: 14px;
+      padding: 10px 16px;
+      background: var(--accent-soft);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      color: var(--text);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+    .actions {
+      margin-top: 26px;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    a.button {
+      display: inline-block;
+      text-decoration: none;
+      padding: 14px 24px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      transition: 0.2s ease;
+      font-weight: 600;
+    }
+    a.primary {
+      background: var(--accent);
+      color: white;
+      border-color: var(--accent);
+    }
+    a.secondary {
+      color: var(--text);
+      background: transparent;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">!</div>
+    <h1>Payment cancelled</h1>
+    <p>No charge has been made to your card.</p>
+    <p>Your booking is still available, and you can continue when you’re ready.</p>
+    <div id="bookingRef" class="ref">Booking reference: not confirmed</div>
+    <div class="actions">
+      <a class="button primary" href="/book/">Resume booking</a>
+      <a class="button secondary" href="/">Back to homepage</a>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const bookingId = params.get('booking_id');
+    const refEl = document.getElementById('bookingRef');
+    if (bookingId) {
+      refEl.textContent = 'Booking reference: ' + bookingId;
+    }
+  </script>
+</body>
+</html>

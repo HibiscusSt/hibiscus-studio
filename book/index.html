@@ -2216,16 +2216,34 @@
         </div>
 
         <!-- Price breakdown -->
-        <div class="deposit-info" style="margin-top:20px;">
+        <div class="deposit-info" id="bookingPriceBreakdown" style="margin-top:20px;">
             <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; border-bottom:1px solid var(--border-color); margin-bottom:12px;">
                 <span style="color:var(--text-secondary); font-size:0.82rem;" id="summaryPriceLabel">6 hours hire</span>
                 <span style="color:var(--text-primary); font-size:0.95rem; font-family:var(--font-display);" id="summaryBasePrice">£465</span>
             </div>
-            <div class="main">
-                <span class="label">50% reservation fee</span>
-                <span class="amount">£233</span>
+            <div style="display:grid; gap:8px; font-size:0.8rem; color:var(--text-secondary);">
+                <div style="display:flex; justify-content:space-between; gap:12px;">
+                    <span>Hire subtotal</span>
+                    <span id="summaryHireSubtotal">£465</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; gap:12px;">
+                    <span>Weekend premium</span>
+                    <span id="summaryWeekendPremium">£0</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; gap:12px;">
+                    <span>Extras</span>
+                    <span id="summaryExtrasTotal">£0</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; gap:12px; padding-top:8px; border-top:1px solid var(--border-color);">
+                    <span style="color:var(--text-primary); font-weight:600;">Subtotal</span>
+                    <span style="color:var(--text-primary); font-weight:600;" id="summarySubtotal">£465</span>
+                </div>
             </div>
-            <div class="note">Remaining £232 due 7 days before your event</div>
+            <div class="main" style="margin-top:14px;">
+                <span class="label">50% reservation fee</span>
+                <span class="amount" id="summaryReservationFee">£233</span>
+            </div>
+            <div class="note" id="summaryRemainingBalance">£232 remaining balance will be emailed to you after booking</div>
         </div>
 
         <!-- What's included -->
@@ -2327,8 +2345,16 @@
                     <span class="summary-value" id="receiptTime">—</span>
                 </div>
                 <div class="summary-row">
-                    <span class="summary-label">Deposit Paid</span>
+                    <span class="summary-label">Hire subtotal</span>
+                    <span class="summary-value" id="receiptSubtotal">£0</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Reservation fee paid</span>
                     <span class="summary-value" id="receiptDeposit">£150</span>
+                </div>
+                <div class="summary-row">
+                    <span class="summary-label">Remaining balance</span>
+                    <span class="summary-value" id="receiptRemainingBalance">£0</span>
                 </div>
             </div>
         </div>
@@ -2433,6 +2459,10 @@
     </div>
 
     <script>
+        // Shared backend config — override via window.HBS_BACKEND_URL before this script runs.
+        window.HBS_BACKEND_URL = (window.HBS_BACKEND_URL || 'https://hb-booking.hibiscusstudiouk.workers.dev').replace(/\/$/, '');
+        const HBS_BACKEND_URL = window.HBS_BACKEND_URL;
+
         // ===== LIGHTWEIGHT TRACKING (3 events only) =====
         // Configure: Set WEBHOOK_URL to your Google Sheet webhook
         const WEBHOOK_URL = ''; // Leave empty to disable tracking
@@ -2473,26 +2503,27 @@
         };
         window.eventTypeLabels = eventTypeLabels;
 
-        // Event pricing (for bridal, private, birthday, baby, corporate)
+        // Event pricing must match the backend's live pricing tables.
+        // See src/index.js EVENT_HIRE_PRICES / WORKSHOP_PRICES / CONTENT_CREATION_PRICES.
         var eventPricing = {
-            4: { hours: 4, price: 345, label: '4 hours', desc: 'Flexi timing' },
-            6: { hours: 6, price: 465, label: '6 hours', desc: 'Half-day' },
-            8: { hours: 8, price: 645, label: '8 hours', desc: 'Flexi timing' },
-            12: { hours: 12, price: 885, label: '12 hours', desc: 'Full day (10am-10pm)' }
+            4: { hours: 4, price: 395, label: '4 hours', desc: 'Flexi timing' },
+            6: { hours: 6, price: 535, label: '6 hours', desc: 'Half-day' },
+            8: { hours: 8, price: 745, label: '8 hours', desc: 'Flexi timing' },
+            12: { hours: 12, price: 1020, label: '12 hours', desc: 'Full day (10am-10pm)' }
         };
 
-        // Workshop pricing — £60/hr, 2hr minimum
+        // Workshop pricing — backend pricing table
         var workshopPricing = {
-            2: { hours: 2, price: 120, label: '2 hours', desc: '£60/hr (2hr min)' },
-            6: { hours: 6, price: 345, label: 'Half day', desc: 'Half-day rate' },
-            12: { hours: 12, price: 645, label: 'Full day', desc: 'Full-day rate' }
+            2: { hours: 2, price: 135, label: '2 hours', desc: '£60/hr (2hr min)' },
+            6: { hours: 6, price: 385, label: 'Half day', desc: 'Half-day rate' },
+            12: { hours: 12, price: 725, label: 'Full day', desc: 'Full-day rate' }
         };
 
-        // Content creation pricing — £45/hr, 2hr minimum
+        // Content creation pricing — backend pricing table
         var contentPricing = {
-            2: { hours: 2, price: 90, label: '2 hours', desc: '£45/hr (2hr min)' },
-            6: { hours: 6, price: 250, label: 'Half day', desc: 'Half-day rate' },
-            12: { hours: 12, price: 500, label: 'Full day', desc: 'Full-day rate' }
+            2: { hours: 2, price: 130, label: '2 hours', desc: '£45/hr (2hr min)' },
+            6: { hours: 6, price: 270, label: 'Half day', desc: 'Half-day rate' },
+            12: { hours: 12, price: 540, label: 'Full day', desc: 'Full-day rate' }
         };
 
         // Get pricing tier based on event type
@@ -2724,10 +2755,8 @@
         var step2MonthYear = currentYear;
 
         function initStep2MonthGrid() {
-            // Start showing from NEXT month (current month is likely over or nearly over)
-            const startFromMonth = currentMonth + 1;
-            const startFromYear = startFromMonth > 11 ? currentYear + 1 : currentYear;
-            step2MonthYear = startFromYear;
+            // Include the current month in the booking flow so customers can book immediately.
+            step2MonthYear = currentYear;
             renderStep2MonthGrid();
         }
 
@@ -2736,8 +2765,8 @@
             document.getElementById('step2MonthPageLabel').textContent = step2MonthYear;
             document.getElementById('step2MonthPrevBtn').disabled = step2MonthYear <= currentYear;
 
-            // For current year, start from next month; for future years, show all
-            const startMonth = step2MonthYear === currentYear ? currentMonth + 1 : 0;
+            // Include the current month and all future months in the current year.
+            const startMonth = step2MonthYear === currentYear ? currentMonth : 0;
 
             let html = '';
             for (let i = startMonth; i < 12; i++) {
@@ -2882,7 +2911,7 @@
             return Promise.all(
                 dates.map(async d => {
                     try {
-                        const response = await fetch(`https://hb-booking.nicholasfcoker.workers.dev/api/availability?date=${d.date}`);
+                        const response = await fetch(`https://hb-booking.hibiscusstudiouk.workers.dev/api/availability?date=${d.date}`);
                         const data = await response.json();
                         const hasAvailableSlot = data.slots?.some(slot => slot.available);
                         return { ...d, hasAvailableSlot };
@@ -3031,7 +3060,7 @@
             const availabilityChecks = await Promise.all(
                 dates.map(async d => {
                     try {
-                        const response = await fetch(`https://hb-booking.nicholasfcoker.workers.dev/api/availability?date=${d.date}`);
+                        const response = await fetch(`https://hb-booking.hibiscusstudiouk.workers.dev/api/availability?date=${d.date}`);
                         const data = await response.json();
                         // A date is available if it has at least one available slot
                         const hasAvailableSlot = data.slots?.some(slot => slot.available);
@@ -3274,7 +3303,7 @@
                 guestCount: 1,
                 notes: ''
             };
-            fetch('https://hb-booking.nicholasfcoker.workers.dev/api/bookings', {
+            fetch(`${HBS_BACKEND_URL}/api/bookings`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(viewingData)
@@ -3462,7 +3491,7 @@
 
             try {
                 const response = await fetch(
-                    `https://hb-booking.nicholasfcoker.workers.dev/api/availability?date=${date}&duration=${duration}`
+                    `${HBS_BACKEND_URL}/api/availability?date=${date}&duration=${duration}`
                 );
                 if (!response.ok) throw new Error('Availability check failed');
                 const data = await response.json();
@@ -3716,6 +3745,24 @@
             goToStep(1);
         }
 
+        function calculateReservationQuote() {
+            const pricing = getPricingForEventType(selectedEventType);
+            const basePrice = pricing[selectedDuration]?.price || selectedDurationPrice || 465;
+            const isWeekend = selectedDateObj && ['Sat', 'Sun'].includes(selectedDateObj.day);
+            const weekendPremium = isWeekend ? Math.round(basePrice * 0.1 * 100) / 100 : 0;
+            const subtotal = basePrice + weekendPremium + extrasTotal;
+            const deposit = Math.round(subtotal * 0.5 * 100) / 100;
+            const remaining = Math.round((subtotal - deposit) * 100) / 100;
+
+            return {
+                basePrice,
+                weekendPremium,
+                subtotal,
+                deposit,
+                remaining
+            };
+        }
+
         function updateSummary() {
             const dateStr = `${selectedDateObj.day} ${selectedDateObj.num} ${selectedDateObj.month}`;
             const timeStr = `${formatTime(selectedTimeStart)} → ${formatTime(selectedTimeEnd)}`;
@@ -3729,12 +3776,16 @@
             document.getElementById('summaryEmail').textContent = document.getElementById('inputEmail').value;
             document.getElementById('summaryPhone').textContent = document.getElementById('inputPhone').value;
 
-            // Price breakdown
-            const basePrice = selectedDurationPrice || 465;
+            const quote = calculateReservationQuote();
             document.getElementById('summaryPriceLabel').textContent = `${selectedDuration || 6} hours hire`;
-            document.getElementById('summaryBasePrice').textContent = `£${basePrice}`;
+            document.getElementById('summaryBasePrice').textContent = `£${quote.basePrice}`;
+            document.getElementById('summaryHireSubtotal').textContent = `£${(quote.basePrice + quote.weekendPremium).toFixed(2)}`;
+            document.getElementById('summaryWeekendPremium').textContent = `£${quote.weekendPremium.toFixed(2)}`;
+            document.getElementById('summaryExtrasTotal').textContent = `£${extrasTotal.toFixed(2)}`;
+            document.getElementById('summarySubtotal').textContent = `£${quote.subtotal.toFixed(2)}`;
+            document.getElementById('summaryReservationFee').textContent = `£${quote.deposit.toFixed(2)}`;
+            document.getElementById('summaryRemainingBalance').textContent = `£${quote.remaining.toFixed(2)} remaining balance will be emailed to you after booking`;
 
-            // Update deposit amount with selected duration price
             updateDepositAmount();
 
             // Render event vibe content
@@ -3768,22 +3819,81 @@
         function showConfirmation() {
             track('cta_click'); // Track: clicked book button
 
-            // Guard: integration.js must be loaded for real payment processing
-            if (!window._integrationLoaded) {
-                alert('Payment system is loading — please try again in a moment. If this persists, contact us on Instagram @hibiscusstudiosuk');
+            if (!selectedEventType || !selectedDate || !selectedDuration || !selectedTimeStart || !selectedGuests) {
+                alert('Please complete the booking form before continuing.');
                 return;
             }
 
-            // Copy values to receipt
-            document.getElementById('receiptEvent').textContent = eventTypeLabels[selectedEventType] || '—';
-            document.getElementById('receiptDate').textContent = `${selectedDateObj.day} ${selectedDateObj.num} ${selectedDateObj.month} ${selectedDateObj.date ? selectedDateObj.date.split('-')[0] : new Date().getFullYear()}`;
-            document.getElementById('receiptTime').textContent = `${formatTime(selectedTimeStart)} → ${formatTime(selectedTimeEnd)} (${selectedDuration}hrs)`;
-            var receiptTotal = (selectedDurationPrice || 465) + extrasTotal;
-            document.getElementById('receiptDeposit').textContent = '£' + Math.ceil(receiptTotal / 2);
+            const btn = document.getElementById('reviewPayBtn');
+            const originalText = btn ? btn.textContent : 'Pay Reservation Fee';
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Processing...';
+            }
 
-            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-            document.getElementById('step9').classList.add('active');
-            document.getElementById('progressBar').style.display = 'none';
+            const bookingPayload = {
+                name: document.getElementById('inputName').value.trim(),
+                email: document.getElementById('inputEmail').value.trim(),
+                phone: document.getElementById('inputPhone').value.trim(),
+                eventType: selectedEventType,
+                date: selectedDate,
+                guestCount: selectedGuests,
+                duration: Number(selectedDuration),
+                startTime: selectedTimeStart,
+                endTime: selectedTimeEnd,
+                notes: ''
+            };
+
+            fetch(`${HBS_BACKEND_URL}/api/bookings`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(bookingPayload)
+            })
+            .then(function(response) {
+                return response.json().then(function(data) {
+                    if (!response.ok) {
+                        throw new Error(data && data.message ? data.message : (data && data.error ? data.error : 'Booking failed'));
+                    }
+                    return data;
+                });
+            })
+            .then(function(data) {
+                // 50% reservation fee is collected here via Stripe checkout.
+                // The rest of the balance is sent by email and invoiced separately.
+                if (data && data.stripeCheckoutUrl) {
+                    window.location.href = data.stripeCheckoutUrl;
+                    return;
+                }
+
+                document.getElementById('receiptEvent').textContent = eventTypeLabels[selectedEventType] || '—';
+                document.getElementById('receiptDate').textContent = `${selectedDateObj.day} ${selectedDateObj.num} ${selectedDateObj.month} ${selectedDateObj.date ? selectedDateObj.date.split('-')[0] : new Date().getFullYear()}`;
+                document.getElementById('receiptTime').textContent = `${formatTime(selectedTimeStart)} → ${formatTime(selectedTimeEnd)} (${selectedDuration}hrs)`;
+
+                const quote = calculateReservationQuote();
+                const backendDeposit = (data && (data.hireDeposit ?? data.deposit));
+                const paidDeposit = backendDeposit ?? quote.deposit;
+                const remainingBalance = quote.subtotal - paidDeposit;
+                document.getElementById('receiptSubtotal').textContent = `£${quote.subtotal.toFixed(2)}`;
+                document.getElementById('receiptDeposit').textContent = `£${paidDeposit.toFixed(2)}`;
+                document.getElementById('receiptRemainingBalance').textContent = `£${remainingBalance.toFixed(2)}`;
+
+                const successMessage = document.querySelector('#step9 .confirm-text');
+                if (successMessage) {
+                    successMessage.innerHTML = 'Your booking has been received. We have collected the 50% advance payment and will email you the remaining balance for payment.';
+                }
+
+                document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+                document.getElementById('step9').classList.add('active');
+                document.getElementById('progressBar').style.display = 'none';
+            })
+            .catch(function(err) {
+                console.error('Booking submission failed:', err);
+                alert('We could not start the payment for this booking. Please try again in a moment, or contact us on Instagram @hibiscusstudiosuk');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                }
+            });
         }
 
         async function goToViewing() {
@@ -3818,17 +3928,29 @@
         }
 
         function updateDepositAmount() {
-            // Use selected duration price (HOOK 4: Pricing uses selected duration)
-            // Default to Half-Day (6hr = £465) if no duration selected yet
-            const basePrice = selectedDurationPrice || 465;
-            const total = basePrice + extrasTotal;
-            const deposit = Math.ceil(total / 2);
-            const remaining = total - deposit;
+            const quote = calculateReservationQuote();
+            const deposit = quote.deposit;
+            const remaining = quote.remaining;
 
-            document.querySelector('.deposit-info .amount').textContent = `£${deposit}`;
-            document.querySelector('.deposit-info .note').textContent = `Remaining £${remaining} due 7 days before your event`;
+            const amountEl = document.querySelector('.deposit-info .amount');
+            const noteEl = document.querySelector('.deposit-info .note');
+            if (amountEl) amountEl.textContent = `£${deposit.toFixed(2)}`;
+            if (noteEl) noteEl.textContent = `£${remaining.toFixed(2)} remaining balance will be emailed to you after booking`;
             const payBtn = document.getElementById('reviewPayBtn');
-            if (payBtn) payBtn.textContent = `Pay £${deposit} Reservation Fee`;
+            if (payBtn) payBtn.textContent = `Pay £${deposit.toFixed(2)} Reservation Fee`;
+
+            const hireSubtotalEl = document.getElementById('summaryHireSubtotal');
+            const weekendPremiumEl = document.getElementById('summaryWeekendPremium');
+            const extrasTotalEl = document.getElementById('summaryExtrasTotal');
+            const subtotalEl = document.getElementById('summarySubtotal');
+            const reservationFeeEl = document.getElementById('summaryReservationFee');
+            const remainingBalanceEl = document.getElementById('summaryRemainingBalance');
+            if (hireSubtotalEl) hireSubtotalEl.textContent = `£${(quote.basePrice + quote.weekendPremium).toFixed(2)}`;
+            if (weekendPremiumEl) weekendPremiumEl.textContent = `£${quote.weekendPremium.toFixed(2)}`;
+            if (extrasTotalEl) extrasTotalEl.textContent = `£${extrasTotal.toFixed(2)}`;
+            if (subtotalEl) subtotalEl.textContent = `£${quote.subtotal.toFixed(2)}`;
+            if (reservationFeeEl) reservationFeeEl.textContent = `£${quote.deposit.toFixed(2)}`;
+            if (remainingBalanceEl) remainingBalanceEl.textContent = `£${quote.remaining.toFixed(2)} remaining balance will be emailed to you after booking`;
         }
 
         function startOver() {
@@ -3862,7 +3984,7 @@
 
             // Reset deposit display (Half-Day £465 = £233 deposit)
             document.querySelector('.deposit-info .amount').textContent = '£233';
-            document.querySelector('.deposit-info .note').textContent = 'Remaining £232 due 7 days before your event';
+            document.querySelector('.deposit-info .note').textContent = '£232 remaining balance will be emailed to you after booking';
             const payBtn = document.getElementById('reviewPayBtn');
             if (payBtn) payBtn.textContent = 'Pay £233 Reservation Fee';
 
@@ -3872,7 +3994,7 @@
 
         // ===== CLOUDFLARE TURNSTILE (INVISIBLE BOT PROTECTION) =====
 
-        // Initialize Turnstile on page load
+        // Initialize Turnstile on page load.
         window.addEventListener('load', function() {
             // Only initialize if turnstile is loaded
             if (typeof turnstile !== 'undefined') {
@@ -3940,7 +4062,14 @@
     </footer>
 
     <!-- Live API Integration (with load detection) -->
-    <script>window._integrationLoaded = false;</script>
-    <script src="https://hb-booking.nicholasfcoker.workers.dev/integration.js" onload="window._integrationLoaded=true" onerror="console.warn('integration.js failed to load — payment will be blocked')"></script>
+    <script>
+        window._integrationLoaded = false;
+        window.HBS_BACKEND_URL = (window.HBS_BACKEND_URL || 'https://hb-booking.hibiscusstudiouk.workers.dev').replace(/\/$/, '');
+        const HBS_INTEGRATION_SCRIPT = document.createElement('script');
+        HBS_INTEGRATION_SCRIPT.src = `${window.HBS_BACKEND_URL}/integration.js`;
+        HBS_INTEGRATION_SCRIPT.onload = () => { window._integrationLoaded = true; };
+        HBS_INTEGRATION_SCRIPT.onerror = () => { console.warn('integration.js failed to load — payment will be blocked'); };
+        document.head.appendChild(HBS_INTEGRATION_SCRIPT);
+    </script>
 </body>
 </html>
