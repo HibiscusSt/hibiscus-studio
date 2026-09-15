@@ -800,7 +800,7 @@ async function getInvoicesForBooking(bookingId, env) {
 
 const BUSINESS_DETAILS = {
   name: 'Hibiscus Studio Limited',
-  address: '19a Peto Street North, London E16',
+  address: '19A Peto Street North, London E16',
   email: 'contacthibiscusstudio@gmail.com',
   bank: {
     name: 'Hibiscus Studio Limited',
@@ -1172,15 +1172,15 @@ async function sendViewingConfirmationEmail(booking, env) {
       <div class="detail">
         <p><strong>Date:</strong> Saturday 7th March 2026</p>
         <p><strong>Time:</strong> ${timeLabel}</p>
-        <p><strong>Location:</strong> 19a Peto Street North, London E16 1DP</p>
+        <p><strong>Location:</strong> 19A Peto Street North, London E16 1DP</p>
         <p><strong>Duration:</strong> 20 minutes</p>
       </div>
       <p>Rochelle will meet you at the studio. No pressure, no obligation — just come and see the space.</p>
-      <a class="cta" href="https://maps.google.com/?q=19a+Peto+Street+North+London+E16+1DP">Get directions</a>
+      <a class="cta" href="https://maps.google.com/?q=19A+Peto+Street+North+London+E16+1DP">Get directions</a>
     </div>
     <div class="footer">
       <p>Questions? Reply to this email or find us on Instagram <a href="https://www.instagram.com/hibiscusstudiosuk">@hibiscusstudiosuk</a></p>
-      <p>Hibiscus Studio | 19a Peto Street North, London E16 1DP</p>
+      <p>Hibiscus Studio | 19A Peto Street North, London E16 1DP</p>
     </div>
   </div>
 </body>
