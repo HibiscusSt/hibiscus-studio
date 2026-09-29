@@ -591,6 +591,30 @@
             background: var(--bg-elevated);
             box-shadow: 0 0 0 1px var(--accent);
         }
+        .date-card.booked {
+            opacity: 0.45;
+            pointer-events: none;
+            cursor: not-allowed;
+            background: var(--bg-base);
+        }
+        .date-card.booked .day-name,
+        .date-card.booked .day-num,
+        .date-card.booked .month {
+            color: var(--text-muted);
+        }
+        .date-card .booked-tag {
+            display: inline-block;
+            margin-top: 6px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--danger);
+            background: var(--danger-soft);
+            border: 1px solid var(--danger-border);
+            padding: 2px 8px;
+            border-radius: 100px;
+        }
         .date-card .day-name {
             font-size: 0.75rem;
             font-weight: 500;
@@ -3208,7 +3232,7 @@
         }
 
         // ===== VIEWING FLOW FUNCTIONS =====
-        function goToViewingTimeSelection() {
+        async function goToViewingTimeSelection() {
             // 20-minute viewing slots per Rochelle's spec: 2pm-3:40pm
             const viewingSlots = [
                 { start: '14:00', end: '14:20', label: '2:00pm' },
@@ -3220,23 +3244,63 @@
             ];
 
             const container = document.getElementById('viewingTimeSlots');
-            container.innerHTML = viewingSlots.map(slot => `
-                <div class="time-slot" onclick="selectViewingTime('${slot.start}', '${slot.end}', '${slot.label}')">
-                    <div class="time-slot-main">
-                        <div class="time-range">
-                            <span class="time">${slot.label}</span>
-                        </div>
-                        <span class="badge">20 mins</span>
-                    </div>
-                </div>
-            `).join('');
-
             document.getElementById('progressFill').style.width = '50%'; // Step 2 of 4
             document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
             document.getElementById('stepViewingTime').classList.add('active');
+
+            // Show a loading state while we check which 20-min slots are booked
+            container.innerHTML = `
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:2.5rem 1rem;">
+                    <div style="width:36px; height:36px; border:3px solid var(--text-secondary); border-top-color:transparent; border-radius:50%; animation:spin 1s linear infinite; margin-bottom:1rem; opacity:0.6;"></div>
+                    <div style="font-size:0.9rem; color:var(--text-secondary);">Checking availability…</div>
+                </div>`;
+
+            // Fetch the 20-minute slot availability for the selected date.
+            // Falls back to "all available" if the API errors, matching the
+            // existing fail-open pattern elsewhere in this page.
+            let availMap = {};
+            if (selectedDate) {
+                try {
+                    const res = await fetch(`${HBS_BACKEND_URL}/api/viewing-availability?date=${selectedDate}`);
+                    if (res.ok) {
+                        const data = await res.json();
+                        (data.slots || []).forEach(s => { availMap[s.start] = s.available; });
+                    }
+                } catch (err) {
+                    console.error('Viewing slot availability fetch failed:', err);
+                }
+            }
+
+            // Re-check step visibility in case the user navigated while we loaded
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.getElementById('stepViewingTime').classList.add('active');
+
+            container.innerHTML = viewingSlots.map(slot => {
+                const booked = availMap[slot.start] === false;
+                const cls = booked ? 'time-slot unavailable' : 'time-slot';
+                const onclick = booked ? '' : `onclick="selectViewingTime('${slot.start}', '${slot.end}', '${slot.label}')"`;
+                const badge = booked
+                    ? '<span style="position:absolute;top:10px;right:10px;background:var(--danger);color:#fff;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;letter-spacing:0.3px;">Booked</span>'
+                    : '<span class="badge">20 mins</span>';
+                return `
+                    <div class="${cls}" style="position:relative;" ${onclick}>
+                        <div class="time-slot-main">
+                            <div class="time-range">
+                                <span class="time">${slot.label}</span>
+                            </div>
+                            ${badge}
+                        </div>
+                    </div>`;
+            }).join('');
         }
 
         function selectViewingTime(start, end, label) {
+            // Guard: ignore clicks that somehow land on a booked slot
+            // (e.g. stale onclick left in the DOM). The rendered markup also
+            // omits the onclick for booked slots, this is a second line of defence.
+            const clicked = event && event.target && event.target.closest ? event.target.closest('.time-slot') : null;
+            if (clicked && clicked.classList.contains('unavailable')) return;
+
             selectedTimeStart = start;
             selectedTimeEnd = end;
             selectedTimeLabel = label;
@@ -3903,10 +3967,61 @@
             document.getElementById('progressFill').style.width = '33%'; // Step 1 of 3 (date → details → confirm)
             document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
             document.getElementById('stepViewing').classList.add('active');
+
+            const container = document.getElementById('viewingDates');
+            // Show a loading state while we check each Tuesday
+            container.innerHTML = `
+                <div style="grid-column:1/-1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:3rem 1.5rem; text-align:center; min-height:200px;">
+                    <div style="width:48px; height:48px; border:3px solid var(--text-secondary); border-top-color:transparent; border-radius:50%; animation:spin 1s linear infinite; margin-bottom:1.5rem; opacity:0.5;"></div>
+                    <div style="font-size:1.1rem; color:var(--text-secondary);">Checking availability…</div>
+                </div>`;
+
             // Viewings are Tuesday only — pull from 3 months to ensure availability
             const allWeekdays = datesByMonth.thisMonth.weekday.concat(datesByMonth.nextMonth.weekday).concat(datesByMonth.later.weekday);
             const tuesdaysOnly = allWeekdays.filter(d => d.day === 'Tue');
-            await renderDateCards(tuesdaysOnly, 'viewingDates');
+
+            // Fetch per-Tuesday 20-min slot availability in parallel.
+            const withAvail = await Promise.all(tuesdaysOnly.map(async d => {
+                try {
+                    const res = await fetch(`${HBS_BACKEND_URL}/api/viewing-availability?date=${d.date}`);
+                    if (!res.ok) throw new Error('availability check failed');
+                    const data = await res.json();
+                    const fullyBooked = data.fullyBooked === true;
+                    return { ...d, fullyBooked, availableCount: data.availableCount };
+                } catch (err) {
+                    // Fail-open: if API errors, leave the date selectable
+                    console.error(`Availability check failed for ${d.date}:`, err);
+                    return { ...d, fullyBooked: false, availableCount: null };
+                }
+            }));
+
+            // If literally every Tuesday is fully booked, surface a friendly
+            // empty state instead of rendering 6 grayed-out cards.
+            const anyAvailable = withAvail.some(d => !d.fullyBooked);
+            if (!anyAvailable) {
+                container.innerHTML = `
+                    <div style="grid-column:1/-1; display:flex; flex-direction:column; align-items:center; padding:2rem 1.5rem; text-align:center;">
+                        <div style="font-family:var(--font-display); font-style:italic; font-size:1.2rem; color:var(--text-primary); margin-bottom:8px;">Fully booked</div>
+                        <div style="font-size:0.9rem; color:var(--text-secondary); line-height:1.5; margin-bottom:20px;">Viewing slots are fully booked for the next 3 months. Please check back soon.</div>
+                        <button onclick="goToStep(0)" style="background:var(--accent); border:none; color:#fff; padding:12px 24px; border-radius:100px; font-size:0.9rem; font-weight:600; cursor:pointer; font-family:var(--font-body);">Back</button>
+                    </div>`;
+                return;
+            }
+
+            // Render all Tuesdays, with fully-booked ones grayed out and
+            // unavailable to click.
+            container.innerHTML = withAvail.map(d => {
+                const cls = d.fullyBooked ? 'date-card booked' : 'date-card';
+                const tag = d.fullyBooked ? '<div class="booked-tag">Booked</div>' : '';
+                const onclick = d.fullyBooked ? '' : `onclick="selectDate(this, '${d.date}', '${d.day}', ${d.num}, '${d.month}')"`;
+                return `
+                    <div class="${cls}" ${onclick}>
+                        <div class="day-name">${d.day}</div>
+                        <div class="day-num">${d.num}</div>
+                        <div class="month">${d.month}</div>
+                        ${tag}
+                    </div>`;
+            }).join('');
         }
 
         // ===== MONTH PICKER (legacy removed — now handled by step2 grid) =====
@@ -3972,7 +4087,7 @@
 
             // Reset UI
             document.querySelectorAll('.choice-card, .date-card, .time-slot, .guest-btn, .extra-option, .duration-card').forEach(el => {
-                el.classList.remove('selected', 'expanded', 'recommended');
+                el.classList.remove('selected', 'expanded', 'recommended', 'unavailable', 'booked');
             });
             document.querySelectorAll('.form-input').forEach(input => {
                 input.value = '';
