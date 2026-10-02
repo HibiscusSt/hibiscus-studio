@@ -10,6 +10,7 @@ on:
       - 'studio-tour.*'
       - 'assets/**'
       - 'book/**'
+      - 'portal/**'
       - 'calculator/**'
       - 'open-house/**'
       - 'booking-demo.html'
