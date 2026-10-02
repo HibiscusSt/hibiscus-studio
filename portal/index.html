@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Client Portal | Hibiscus Studio</title>
+    <meta
+      name="description"
+      content="View your Hibiscus Studio client portal booking status, payment schedule and deposit details."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #fefdfb;
+        --bg-gradient-start: #fdf8f4;
+        --card-bg: #ffffff;
+        --border: #e8e3da;
+        --ink: #1c1917;
+        --ink-2: #44403c;
+        --muted: #a8a29e;
+        --rose: #be4d5e;
+        --rose-soft: #fdf2f4;
+        --sage: #6b8f6b;
+        --sage-bg: #eef4ee;
+        --amber: #b77c28;
+        --amber-bg: #fff5e8;
+        --danger: #a03939;
+        --danger-bg: #fff0f0;
+        --shadow: 0 2px 20px rgba(0, 0, 0, 0.04);
+        --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.06);
+        --radius: 18px;
+        --accent: #be4d5e;
+      }
+
+      [data-theme='dark'] {
+        --bg: #141210;
+        --bg-gradient-start: #1a1714;
+        --card-bg: #1e1b18;
+        --border: #2e2a25;
+        --ink: #f0ece4;
+        --ink-2: #c4bfb6;
+        --muted: #6e675e;
+        --rose: #d4848f;
+        --rose-soft: rgba(212, 132, 143, 0.1);
+        --sage: #7aa87a;
+        --sage-bg: rgba(122, 168, 122, 0.1);
+        --amber: #d0a55b;
+        --amber-bg: rgba(208, 165, 91, 0.12);
+        --danger: #d08a8a;
+        --danger-bg: rgba(208, 138, 138, 0.12);
+        --shadow: 0 2px 20px rgba(0, 0, 0, 0.2);
+        --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.3);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at top, rgba(190, 77, 94, 0.08), transparent 35%),
+          linear-gradient(180deg, var(--bg-gradient-start), var(--bg));
+        color: var(--ink);
+        font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        transition: background 0.2s ease, color 0.2s ease;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .page-shell {
+        max-width: 860px;
+        margin: 0 auto;
+        padding: 24px 20px 56px;
+      }
+
+      .topbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        font-size: 0.78rem;
+        color: var(--muted);
+        text-decoration: none;
+      }
+
+      .brand-mark {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--rose);
+        box-shadow: 0 0 0 4px rgba(190, 77, 94, 0.08);
+      }
+
+      .theme-toggle {
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.2);
+        color: var(--ink);
+        border-radius: 999px;
+        padding: 9px 12px;
+        cursor: pointer;
+        font: inherit;
+      }
+
+      .panel {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 30px;
+        box-shadow: var(--shadow-lg);
+        padding: 28px 20px 20px;
+      }
+
+      .status-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 999px;
+        padding: 8px 14px;
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        border: 1px solid transparent;
+      }
+
+      .status-pending {
+        background: var(--rose-soft);
+        color: var(--rose);
+        border-color: rgba(190, 77, 94, 0.15);
+      }
+
+      .status-balance_due,
+      .status-fully_paid,
+      .status-cancelled {
+        background: var(--sage-bg);
+        color: var(--sage);
+        border-color: rgba(107, 143, 107, 0.18);
+      }
+
+      .status-completed,
+      .status-refunded {
+        background: var(--amber-bg);
+        color: var(--amber);
+        border-color: rgba(183, 124, 40, 0.18);
+      }
+
+      h1 {
+        margin: 18px 0 10px;
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-size: clamp(2.5rem, 5vw, 4rem);
+        line-height: 0.96;
+        font-weight: 400;
+        letter-spacing: -0.02em;
+      }
+
+      .subtitle {
+        margin: 0;
+        color: var(--ink-2);
+        font-size: 1rem;
+        line-height: 1.7;
+      }
+
+      .meta-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 12px;
+        margin-top: 22px;
+        padding-top: 8px;
+        border-top: 1px solid var(--border);
+      }
+
+      .meta-item {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 12px 14px;
+      }
+
+      .meta-label {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--muted);
+        font-size: 0.72rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .meta-value {
+        color: var(--ink);
+        font-size: 1rem;
+        font-weight: 600;
+      }
+
+      .summary {
+        margin-top: 26px;
+        border-top: 1px solid var(--border);
+        padding-top: 24px;
+      }
+
+      .summary-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+      }
+
+      h2 {
+        margin: 0;
+        font-family: 'Instrument Serif', Georgia, serif;
+        font-size: clamp(1.8rem, 3vw, 2.5rem);
+        font-weight: 400;
+      }
+
+      .total-due {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 12px;
+        border-radius: 999px;
+        background: var(--rose-soft);
+        color: var(--rose);
+        font-weight: 700;
+        font-size: 0.8rem;
+      }
+
+      .stage-stack {
+        display: grid;
+        gap: 14px;
+      }
+
+      .stage {
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 18px 18px 16px;
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent);
+      }
+
+      .stage.is-paid {
+        border-color: rgba(107, 143, 107, 0.25);
+        background: rgba(107, 143, 107, 0.04);
+      }
+
+      .stage-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 18px;
+      }
+
+      .stage-label {
+        margin: 0 0 6px;
+        color: var(--muted);
+        font-size: 0.72rem;
+        line-height: 1.5;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .stage-name {
+        margin: 0;
+        font-size: 1.12rem;
+        font-weight: 600;
+      }
+
+      .stage-amount {
+        font-weight: 700;
+        font-size: 1.22rem;
+        white-space: nowrap;
+      }
+
+      .stage-info {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin: 14px 0 0;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 7px 10px;
+        font-size: 0.73rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+
+      .pill.neutral {
+        background: rgba(168, 162, 158, 0.12);
+        color: var(--ink-2);
+      }
+
+      .pill.success {
+        background: rgba(107, 143, 107, 0.12);
+        color: var(--sage);
+      }
+
+      .pill.warning {
+        background: rgba(183, 124, 40, 0.12);
+        color: var(--amber);
+      }
+
+      .stage-note,
+      .stage-warning {
+        margin: 12px 0 0;
+        color: var(--ink-2);
+        line-height: 1.6;
+        font-size: 0.93rem;
+      }
+
+      .stage-warning {
+        color: var(--amber);
+      }
+
+      .row-actions {
+        margin-top: 16px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 12px 18px;
+        border-radius: 999px;
+        text-decoration: none;
+        font-weight: 700;
+        transition: transform 0.2s ease;
+      }
+
+      .action:hover {
+        transform: translateY(-1px);
+      }
+
+      .action.primary {
+        color: #fff;
+        background: var(--rose);
+        border: 1px solid var(--rose);
+      }
+
+      .bank-shell {
+        margin-top: 14px;
+      }
+
+      .bank-toggle {
+        border: 1px solid var(--border);
+        background: transparent;
+        color: var(--ink);
+        border-radius: 999px;
+        padding: 10px 12px;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .bank-panel {
+        margin-top: 12px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        background: rgba(168, 162, 158, 0.04);
+        padding: 14px;
+      }
+
+      .bank-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .bank-row:last-child {
+        border-bottom: none;
+      }
+
+      .bank-row span:first-child {
+        color: var(--muted);
+      }
+
+      .support {
+        margin-top: 26px;
+        padding-top: 18px;
+        border-top: 1px solid var(--border);
+        color: var(--ink-2);
+        line-height: 1.7;
+      }
+
+      .support a {
+        color: var(--rose);
+        font-weight: 600;
+      }
+
+      .lookup-form {
+        margin-top: 22px;
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        background: rgba(168, 162, 158, 0.03);
+        padding: 18px;
+      }
+
+      .field-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        color: var(--ink-2);
+        font-size: 0.82rem;
+        font-weight: 600;
+      }
+
+      .field input {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--card-bg);
+        color: var(--ink);
+        font: inherit;
+        padding: 12px 14px;
+      }
+
+      .field select,
+      .field textarea {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: var(--card-bg);
+        color: var(--ink);
+        font: inherit;
+        padding: 12px 14px;
+      }
+
+      .field textarea {
+        min-height: 110px;
+        resize: vertical;
+      }
+
+      .field select:focus,
+      .field textarea:focus {
+        outline: 2px solid rgba(190, 77, 94, 0.2);
+        border-color: var(--rose);
+      }
+
+      .request-status {
+        min-height: 1.5em;
+        margin: 12px 0 0;
+        color: var(--sage);
+        font-size: 0.88rem;
+      }
+
+      .request-history {
+        display: grid;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .request-history-item {
+        border-left: 3px solid var(--rose);
+        padding: 9px 12px;
+        background: var(--rose-soft);
+        color: var(--ink-2);
+        font-size: 0.85rem;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+      }
+
+      .request-history-item strong {
+        display: block;
+        color: var(--rose);
+        font-size: 0.72rem;
+        margin-bottom: 3px;
+        text-transform: uppercase;
+      }
+
+      .field input:focus {
+        outline: 2px solid rgba(190, 77, 94, 0.2);
+        border-color: var(--rose);
+      }
+
+      .form-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .action.secondary {
+        background: transparent;
+        color: var(--ink);
+        border: 1px solid var(--border);
+      }
+
+      .hidden {
+        display: none !important;
+      }
+
+      .error {
+        color: var(--danger);
+      }
+
+      @media (max-width: 640px) {
+        .panel {
+          padding: 22px 16px 18px;
+        }
+
+        .summary-header,
+        .stage-top {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .total-due {
+          display: inline-flex;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="topbar">
+        <a class="brand" href="https://hibiscusstudio.co.uk/" aria-label="Hibiscus Studio home">
+          <span class="brand-mark" aria-hidden="true"></span>
+          Hibiscus Studio
+        </a>
+        <button class="theme-toggle" type="button" aria-label="Toggle theme">☀︎ / ☾</button>
+      </header>
+
+      <main class="panel" aria-live="polite">
+        <div id="statusBadge" class="status-badge">Client portal</div>
+        <h1 id="statusHeading">Client portal</h1>
+        <p id="statusCopy" class="subtitle">
+          Enter your booking reference and email to check your payment status, update details,
+          or request a cancellation.
+        </p>
+
+        <form id="lookupForm" class="lookup-form">
+          <div class="field-row">
+            <label class="field">
+              <span>Booking reference</span>
+              <input id="bookingRefInput" type="text" name="ref" placeholder="HB-12345" autocomplete="off" />
+            </label>
+            <label class="field">
+              <span>Email address</span>
+              <input id="emailInput" type="email" name="email" placeholder="you@example.com" autocomplete="email" />
+            </label>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="action primary">Track booking</button>
+            <button type="button" id="clearLookup" class="action secondary">Clear</button>
+          </div>
+        </form>
+
+        <div id="bookingDetails" class="hidden">
+          <div class="meta-grid">
+            <div class="meta-item">
+              <span class="meta-label">Date</span>
+              <span id="detailDate" class="meta-value">—</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Time</span>
+              <span id="detailTime" class="meta-value">—</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Event type</span>
+              <span id="detailEventType" class="meta-value">—</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Reference</span>
+              <span id="detailReference" class="meta-value">—</span>
+            </div>
+          </div>
+
+          <section class="summary">
+            <div class="summary-header">
+              <h2>Payment summary</h2>
+              <span id="totalDue" class="total-due">£0.00</span>
+            </div>
+            <div id="stages" class="stage-stack"></div>
+          </section>
+
+          <section class="summary" aria-labelledby="requestHeading">
+            <div class="summary-header">
+              <h2 id="requestHeading">Submit a request</h2>
+            </div>
+            <form id="clientRequestForm" class="lookup-form">
+              <div class="field-row">
+                <label class="field">
+                  <span>Request type</span>
+                  <select id="requestType" name="type" required>
+                    <option value="cancellation">Request a cancellation</option>
+                    <option value="custom">Other booking request</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Message</span>
+                  <textarea id="requestMessage" name="message" maxlength="2000" required placeholder="Tell us what you would like us to help with."></textarea>
+                </label>
+              </div>
+              <div class="form-actions">
+                <button id="submitRequest" type="submit" class="action primary">Send request</button>
+              </div>
+              <p id="requestStatus" class="request-status" role="status" aria-live="polite"></p>
+              <div id="requestHistory" class="request-history"></div>
+            </form>
+          </section>
+        </div>
+
+        <p id="supportCopy" class="support">
+          Need to cancel or change something? Email us at
+          <a id="supportEmail" href="mailto:contacthibiscusstudio@gmail.com">contacthibiscusstudio@gmail.com</a>.
+        </p>
+      </main>
+    </div>
+
+    <script>
+      const WORKER_URL = 'https://hb-booking.hibiscusstudiouk.workers.dev';
+      const params = new URLSearchParams(window.location.search);
+      const initialRef = (params.get('ref') || '').trim();
+      const initialEmail = (params.get('email') || '').trim();
+
+      const statusBadge = document.getElementById('statusBadge');
+      const statusHeading = document.getElementById('statusHeading');
+      const statusCopy = document.getElementById('statusCopy');
+      const lookupForm = document.getElementById('lookupForm');
+      const bookingRefInput = document.getElementById('bookingRefInput');
+      const emailInput = document.getElementById('emailInput');
+      const bookingDetails = document.getElementById('bookingDetails');
+      const detailDate = document.getElementById('detailDate');
+      const detailTime = document.getElementById('detailTime');
+      const detailEventType = document.getElementById('detailEventType');
+      const detailReference = document.getElementById('detailReference');
+      const totalDue = document.getElementById('totalDue');
+      const stagesHost = document.getElementById('stages');
+      const supportEmail = document.getElementById('supportEmail');
+      const clearButton = document.getElementById('clearLookup');
+      const clientRequestForm = document.getElementById('clientRequestForm');
+      const requestType = document.getElementById('requestType');
+      const requestMessage = document.getElementById('requestMessage');
+      const submitRequestButton = document.getElementById('submitRequest');
+      const requestStatus = document.getElementById('requestStatus');
+      const requestHistory = document.getElementById('requestHistory');
+
+      const money = (value) =>
+        new Intl.NumberFormat('en-GB', {
+          style: 'currency',
+          currency: 'GBP',
+          minimumFractionDigits: 2,
+        }).format(Number(value || 0));
+
+      const formatDate = (value) => {
+        if (!value) return '—';
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return value;
+        return new Intl.DateTimeFormat('en-GB', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        }).format(date);
+      };
+
+      const setTheme = (mode) => {
+        document.documentElement.setAttribute('data-theme', mode === 'dark' ? 'dark' : 'light');
+      };
+
+      const toggleButton = document.querySelector('.theme-toggle');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setTheme(prefersDark ? 'dark' : 'light');
+      toggleButton.addEventListener('click', () => {
+        const nextTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        setTheme(nextTheme);
+      });
+
+      const badgeClassByStatus = (statusText) => {
+        if (!statusText) return 'status-pending';
+        if (statusText.toLowerCase().includes('cancelled')) return 'status-cancelled';
+        if (statusText.toLowerCase().includes('final payment due')) return 'status-balance_due';
+        if (statusText.toLowerCase().includes('fully paid')) return 'status-fully_paid';
+        if (statusText.toLowerCase().includes('refunded')) return 'status-refunded';
+        if (statusText.toLowerCase().includes('event completed')) return 'status-completed';
+        return 'status-pending';
+      };
+
+      function renderStage(stage, bankDetails, bookingRef) {
+        if (stage.hidden) return '';
+
+        const dueText = stage.dueDate ? formatDate(stage.dueDate) : 'Due now';
+        const detailLabel = stage.paid && stage.paidOn ? `Paid on ${stage.paidOn}` : dueText;
+        const methodText = stage.method || 'Payment';
+        const buttonHtml = stage.payUrl && !stage.paid
+          ? `<a class="action primary" href="${stage.payUrl}" target="_blank" rel="noopener noreferrer">${stage.payButton || 'Pay now'}</a>`
+          : '';
+
+        const noteHtml = stage.warning ? `<p class="stage-warning">${stage.warning}</p>` : '';
+        const infoHtml = stage.note ? `<p class="stage-note">${stage.note}</p>` : '';
+
+        let bankHtml = '';
+        if (stage.viewDetails && bankDetails) {
+          bankHtml = `
+            <div class="bank-shell">
+              <button class="bank-toggle" type="button" aria-expanded="false">View payment details</button>
+              <div class="bank-panel" hidden>
+                <div class="bank-row"><span>Account name</span><strong>${bankDetails.accountName || 'Hibiscus Studio Limited'}</strong></div>
+                <div class="bank-row"><span>Sort code</span><strong>${bankDetails.sortCode || '—'}</strong></div>
+                <div class="bank-row"><span>Account number</span><strong>${bankDetails.accountNumber || '—'}</strong></div>
+                <div class="bank-row"><span>Reference</span><strong>${bankDetails.reference || bookingRef || '—'}</strong></div>
+              </div>
+            </div>
+          `;
+        }
+
+        return `
+          <article class="stage ${stage.paid ? 'is-paid' : ''}">
+            <div class="stage-top">
+              <div>
+                <p class="stage-label">${stage.label || 'Payment'}</p>
+                <p class="stage-name">${stage.name || 'Payment'}</p>
+              </div>
+              <div class="stage-amount">${money(stage.amount)}</div>
+            </div>
+            <div class="stage-info">
+              <span class="pill ${stage.paid ? 'success' : 'neutral'}">${stage.paid ? 'Paid' : methodText}</span>
+              <span class="pill ${stage.paid ? 'success' : 'neutral'}">${detailLabel}</span>
+              ${stage.warning ? '<span class="pill warning">Action required</span>' : ''}
+            </div>
+            ${infoHtml}
+            ${noteHtml}
+            <div class="row-actions">
+              ${buttonHtml || ''}
+            </div>
+            ${bankHtml}
+          </article>
+        `;
+      }
+
+      function renderBooking(data) {
+        if (!data || !data.details) {
+          throw new Error('Booking details are unavailable right now.');
+        }
+
+        const statusText = data.statusLabel || data.status || 'Booking status';
+        statusBadge.textContent = statusText;
+        statusBadge.className = `status-badge ${badgeClassByStatus(statusText)}`;
+        statusHeading.textContent = statusText;
+        statusCopy.textContent = 'Your current booking status and payment schedule are shown below.';
+        bookingDetails.classList.remove('hidden');
+        lookupForm.classList.add('hidden');
+
+        detailDate.textContent = data.details.date ? formatDate(`${data.details.date}T00:00:00`) : '—';
+        detailTime.textContent = data.details.time || '—';
+        detailEventType.textContent = data.details.eventType || '—';
+        detailReference.textContent = data.details.reference || bookingRefInput.value.trim() || '—';
+        totalDue.textContent = money(data.hireTotal || 0);
+
+        if (Array.isArray(data.stages) && data.stages.length) {
+          stagesHost.innerHTML = data.stages.map((stage) => renderStage(stage, data.bankDetails, data.details.reference || bookingRefInput.value.trim())).join('');
+        } else {
+          stagesHost.innerHTML = '<p class="subtitle">No payment stages are available for this booking yet.</p>';
+        }
+
+        renderClientRequests(data.clientRequests || []);
+        requestStatus.textContent = '';
+
+        supportEmail.href = `mailto:contacthibiscusstudio@gmail.com?subject=${encodeURIComponent('Booking question for ref ' + (data.details.reference || bookingRefInput.value.trim()))}`;
+
+        document.querySelectorAll('.bank-toggle').forEach((button) => {
+          button.addEventListener('click', () => {
+            const bankPanel = button.nextElementSibling;
+            const isOpen = button.getAttribute('aria-expanded') === 'true';
+            button.setAttribute('aria-expanded', String(!isOpen));
+            bankPanel.hidden = isOpen;
+            button.textContent = isOpen ? 'View payment details' : 'Hide payment details';
+          });
+        });
+      }
+
+      function renderClientRequests(requests) {
+        requestHistory.replaceChildren();
+        requests.forEach((request) => {
+          const item = document.createElement('div');
+          item.className = 'request-history-item';
+          const label = document.createElement('strong');
+          label.textContent = request.type === 'cancellation' ? 'Cancellation request sent' : 'Custom request sent';
+          const message = document.createElement('span');
+          message.textContent = request.message || '';
+          item.append(label, message);
+          requestHistory.appendChild(item);
+        });
+      }
+
+      clientRequestForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const bookingRef = detailReference.textContent.trim();
+        const emailAddress = emailInput.value.trim();
+        const message = requestMessage.value.trim();
+        if (!bookingRef || !emailAddress || !message) return;
+
+        submitRequestButton.disabled = true;
+        submitRequestButton.textContent = 'Sending…';
+        requestStatus.className = 'request-status';
+        requestStatus.textContent = '';
+
+        try {
+          const response = await fetch(`${WORKER_URL}/api/bookings/${encodeURIComponent(bookingRef)}/requests`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: emailAddress, type: requestType.value, message }),
+          });
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(result.error || 'Your request could not be sent. Please try again.');
+
+          const currentRequests = [...requestHistory.querySelectorAll('.request-history-item')];
+          const requestItem = document.createElement('div');
+          requestItem.className = 'request-history-item';
+          const label = document.createElement('strong');
+          label.textContent = requestType.value === 'cancellation' ? 'Cancellation request sent' : 'Custom request sent';
+          const requestText = document.createElement('span');
+          requestText.textContent = message;
+          requestItem.append(label, requestText);
+          requestHistory.replaceChildren(...currentRequests, requestItem);
+          requestStatus.textContent = 'Your request has been sent to the Hibiscus Studio team.';
+          requestMessage.value = '';
+        } catch (error) {
+          requestStatus.className = 'request-status error';
+          requestStatus.textContent = error.message;
+        } finally {
+          submitRequestButton.disabled = false;
+          submitRequestButton.textContent = 'Send request';
+        }
+      });
+
+      function showError(message) {
+        statusBadge.textContent = 'Unavailable';
+        statusBadge.className = 'status-badge status-pending';
+        statusHeading.textContent = 'We could not load this booking';
+        statusCopy.textContent = message;
+        bookingDetails.classList.add('hidden');
+        lookupForm.classList.remove('hidden');
+      }
+
+      function lookupBooking(ref, emailValue) {
+        const bookingRef = (ref || '').trim();
+        const emailAddress = (emailValue || '').trim();
+
+        if (!bookingRef || !emailAddress) {
+          showError('Please enter both your booking reference and email address.');
+          return;
+        }
+
+        statusBadge.textContent = 'Checking booking';
+        statusBadge.className = 'status-badge status-pending';
+        statusHeading.textContent = 'Checking your booking';
+        statusCopy.textContent = 'Looking up your payment status and booking details…';
+        bookingDetails.classList.add('hidden');
+        lookupForm.classList.remove('hidden');
+
+        fetch(`${WORKER_URL}/api/bookings/${encodeURIComponent(bookingRef)}/status?email=${encodeURIComponent(emailAddress)}`)
+          .then(async (response) => {
+            if (!response.ok) {
+              const errorData = await response.json().catch(() => ({}));
+              throw new Error(errorData.error || 'This booking could not be found.');
+            }
+            return response.json();
+          })
+          .then((data) => renderBooking(data))
+          .catch((error) => {
+            console.error(error);
+            showError('The booking reference and email did not match. Please try again, or contact us for help.');
+          });
+      }
+
+      lookupForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        lookupBooking(bookingRefInput.value, emailInput.value);
+      });
+
+      clearButton.addEventListener('click', () => {
+        bookingRefInput.value = '';
+        emailInput.value = '';
+        statusBadge.textContent = 'Client portal';
+        statusBadge.className = 'status-badge';
+        statusHeading.textContent = 'Client portal';
+        statusCopy.textContent = 'Enter your booking reference and email to check your payment status, update details, or request a cancellation.';
+        bookingDetails.classList.add('hidden');
+        lookupForm.classList.remove('hidden');
+      });
+
+      if (initialRef || initialEmail) {
+        bookingRefInput.value = initialRef;
+        emailInput.value = initialEmail;
+        lookupBooking(initialRef, initialEmail);
+      }
+    </script>
+  </body>
+</html>
