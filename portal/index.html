@@ -616,14 +616,28 @@
                   <span>Request type</span>
                   <select id="requestType" name="type" required>
                     <option value="cancellation">Request a cancellation</option>
+                    <option value="date_change">Request a date change (admin approval required)</option>
                     <option value="custom">Other booking request</option>
                   </select>
                 </label>
-                <label class="field">
+                <label id="requestMessageField" class="field">
                   <span>Message</span>
                   <textarea id="requestMessage" name="message" maxlength="2000" required placeholder="Tell us what you would like us to help with."></textarea>
                 </label>
               </div>
+              <div id="dateChangeFields" class="field-row hidden">
+                <label class="field">
+                  <span>Requested date</span>
+                  <input id="requestNewDate" type="date" required disabled />
+                </label>
+                <label class="field">
+                  <span>Available time</span>
+                  <select id="requestNewTimeSlot" required disabled>
+                    <option value="">Choose a date first</option>
+                  </select>
+                </label>
+              </div>
+              <p id="availabilityStatus" class="request-status" role="status" aria-live="polite"></p>
               <div class="form-actions">
                 <button id="submitRequest" type="submit" class="action primary">Send request</button>
               </div>
@@ -664,9 +678,17 @@
       const clientRequestForm = document.getElementById('clientRequestForm');
       const requestType = document.getElementById('requestType');
       const requestMessage = document.getElementById('requestMessage');
+      const requestMessageField = document.getElementById('requestMessageField');
+      const dateChangeFields = document.getElementById('dateChangeFields');
+      const requestNewDate = document.getElementById('requestNewDate');
+      const requestNewTimeSlot = document.getElementById('requestNewTimeSlot');
+      const availabilityStatus = document.getElementById('availabilityStatus');
       const submitRequestButton = document.getElementById('submitRequest');
       const requestStatus = document.getElementById('requestStatus');
       const requestHistory = document.getElementById('requestHistory');
+      let currentBookingDuration = 6;
+      let currentBookingDate = '';
+      let currentClientRequests = [];
 
       const money = (value) =>
         new Intl.NumberFormat('en-GB', {
@@ -777,6 +799,8 @@
         detailTime.textContent = data.details.time || '—';
         detailEventType.textContent = data.details.eventType || '—';
         detailReference.textContent = data.details.reference || bookingRefInput.value.trim() || '—';
+        currentBookingDuration = Number(data.details.duration) || 6;
+        currentBookingDate = data.details.date || '';
         totalDue.textContent = money(data.hireTotal || 0);
 
         if (Array.isArray(data.stages) && data.stages.length) {
@@ -802,25 +826,89 @@
       }
 
       function renderClientRequests(requests) {
+        currentClientRequests = requests;
         requestHistory.replaceChildren();
         requests.forEach((request) => {
           const item = document.createElement('div');
           item.className = 'request-history-item';
           const label = document.createElement('strong');
-          label.textContent = request.type === 'cancellation' ? 'Cancellation request sent' : 'Custom request sent';
+          label.textContent = request.type === 'cancellation'
+            ? 'Cancellation request sent'
+            : request.type === 'date_change' ? 'Date-change request pending approval' : 'Custom request sent';
           const message = document.createElement('span');
-          message.textContent = request.message || '';
+          message.textContent = request.type === 'date_change'
+            ? `Requested date: ${formatDate(request.newDate)}${request.newTimeLabel ? ` at ${request.newTimeLabel}` : ''}`
+            : request.message || '';
           item.append(label, message);
           requestHistory.appendChild(item);
         });
       }
+
+      function setMinimumRequestDate() {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        requestNewDate.min = [tomorrow.getFullYear(), String(tomorrow.getMonth() + 1).padStart(2, '0'), String(tomorrow.getDate()).padStart(2, '0')].join('-');
+      }
+
+      requestType.addEventListener('change', () => {
+        const dateChange = requestType.value === 'date_change';
+        dateChangeFields.classList.toggle('hidden', !dateChange);
+        requestMessageField.classList.toggle('hidden', dateChange);
+        requestMessage.required = !dateChange;
+        requestNewDate.disabled = !dateChange;
+        requestNewDate.required = dateChange;
+        requestNewTimeSlot.disabled = true;
+        requestNewTimeSlot.required = dateChange;
+        requestNewTimeSlot.replaceChildren(new Option(dateChange ? 'Choose a date first' : '', ''));
+        availabilityStatus.textContent = '';
+        if (dateChange) setMinimumRequestDate();
+      });
+
+      requestNewDate.addEventListener('change', async () => {
+        const date = requestNewDate.value;
+        requestNewTimeSlot.disabled = true;
+        requestNewTimeSlot.replaceChildren(new Option('Checking availability…', ''));
+        availabilityStatus.className = 'request-status';
+        availabilityStatus.textContent = '';
+        if (!date) {
+          requestNewTimeSlot.replaceChildren(new Option('Choose a date first', ''));
+          return;
+        }
+        if (date === currentBookingDate) {
+          requestNewTimeSlot.replaceChildren(new Option('Choose a different date', ''));
+          availabilityStatus.textContent = 'Select a date different from your current booking.';
+          return;
+        }
+
+        try {
+          const response = await fetch(`${WORKER_URL}/api/availability?date=${encodeURIComponent(date)}&duration=${encodeURIComponent(currentBookingDuration)}`);
+          const result = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(result.error || 'Could not check date availability.');
+          const availableSlots = (result.slots || []).filter((slot) => slot.available);
+          requestNewTimeSlot.replaceChildren(new Option(
+            availableSlots.length ? 'Select an available time' : 'No times available on this date',
+            '',
+          ));
+          availableSlots.forEach((slot) => requestNewTimeSlot.add(new Option(slot.label, slot.id)));
+          requestNewTimeSlot.disabled = availableSlots.length === 0;
+          availabilityStatus.textContent = availableSlots.length
+            ? `${availableSlots.length} available time${availableSlots.length === 1 ? '' : 's'}; your request will need admin approval.`
+            : 'No times are available on this date. Please choose another date.';
+        } catch (error) {
+          requestNewTimeSlot.replaceChildren(new Option('Availability could not be checked', ''));
+          availabilityStatus.className = 'request-status error';
+          availabilityStatus.textContent = error.message;
+        }
+      });
 
       clientRequestForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         const bookingRef = detailReference.textContent.trim();
         const emailAddress = emailInput.value.trim();
         const message = requestMessage.value.trim();
-        if (!bookingRef || !emailAddress || !message) return;
+        const type = requestType.value;
+        if (!bookingRef || !emailAddress || (type !== 'date_change' && !message)) return;
+        if (type === 'date_change' && (!requestNewDate.value || !requestNewTimeSlot.value)) return;
 
         submitRequestButton.disabled = true;
         submitRequestButton.textContent = 'Sending…';
@@ -831,22 +919,27 @@
           const response = await fetch(`${WORKER_URL}/api/bookings/${encodeURIComponent(bookingRef)}/requests`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: emailAddress, type: requestType.value, message }),
+            body: JSON.stringify({
+              email: emailAddress,
+              type,
+              message,
+              newDate: type === 'date_change' ? requestNewDate.value : undefined,
+              newTimeSlot: type === 'date_change' ? requestNewTimeSlot.value : undefined,
+            }),
           });
           const result = await response.json().catch(() => ({}));
           if (!response.ok) throw new Error(result.error || 'Your request could not be sent. Please try again.');
 
-          const currentRequests = [...requestHistory.querySelectorAll('.request-history-item')];
-          const requestItem = document.createElement('div');
-          requestItem.className = 'request-history-item';
-          const label = document.createElement('strong');
-          label.textContent = requestType.value === 'cancellation' ? 'Cancellation request sent' : 'Custom request sent';
-          const requestText = document.createElement('span');
-          requestText.textContent = message;
-          requestItem.append(label, requestText);
-          requestHistory.replaceChildren(...currentRequests, requestItem);
-          requestStatus.textContent = 'Your request has been sent to the Hibiscus Studio team.';
+          renderClientRequests([...currentClientRequests, result.request]);
+          requestStatus.textContent = type === 'date_change'
+            ? 'Your date-change request has been sent for admin approval.'
+            : 'Your request has been sent to the Hibiscus Studio team.';
           requestMessage.value = '';
+          if (type === 'date_change') {
+            requestNewDate.value = '';
+            requestNewTimeSlot.replaceChildren(new Option('Choose a date first', ''));
+            requestNewTimeSlot.disabled = true;
+          }
         } catch (error) {
           requestStatus.className = 'request-status error';
           requestStatus.textContent = error.message;
