@@ -207,6 +207,9 @@
 
         footer { border-top: 1px solid var(--border); padding: 28px 0; text-align: center; }
         .footer-brand { font-family: var(--serif); font-size: 1.2rem; margin-bottom: 6px; }
+        .booking-cta-row { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .cta-track { background: #e5e7eb; color: #292524; }
+        .cta-track:hover { background: #d1d5db; }
         .footer-copy { font-size: 0.8rem; color: var(--faint); }
 
         .mobile-cta { display: none; position: fixed; bottom: 16px; left: 16px; right: 16px; z-index: 40; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
@@ -420,8 +423,9 @@
 
         <p class="reveal" style="font-size:0.88rem; color:var(--ink2); text-align:center; margin-top:24px; margin-bottom:8px;">Friday evening, Saturday and Sunday bookings include a <strong>10% weekend premium</strong>.<br>Need 5 or 7 hours? Book the nearest package and we can adjust from there.<br>Additional time is charged at <strong>&pound;100 per hour</strong>&mdash;just let us know in advance at <a href="mailto:contacthibiscusstudio@gmail.com" style="color:var(--accent)">contacthibiscusstudio@gmail.com</a>.</p>
 
-        <div class="reveal" style="text-align: center; margin-top: 32px">
+        <div class="reveal booking-cta-row" style="margin-top: 32px">
             <a href="book/" class="cta">Book your event <span class="arrow">&rarr;</span></a>
+            <a href="/portal/" class="cta cta-track">Track Your Event</a>
         </div>
     </div>
 </section>
