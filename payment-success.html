@@ -96,6 +96,30 @@
       color: var(--text);
       background: transparent;
     }
+    .portal-box {
+      margin-top: 28px;
+      padding: 22px 20px;
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      text-align: center;
+    }
+    .portal-title {
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.15rem;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .portal-copy {
+      font-size: 0.95rem;
+      margin: 0 0 16px;
+    }
+    .portal-btn {
+      display: inline-block;
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
   </style>
 </head>
 <body>
@@ -105,6 +129,11 @@
     <p>Thank you — your reservation fee has been received successfully.</p>
     <p>We’ll be in touch soon to confirm your event details and send the remaining balance instructions.</p>
     <div id="bookingRef" class="ref">Booking reference: loading...</div>
+    <div id="portalBox" class="portal-box" style="display:none;">
+      <div class="portal-title">Track and manage your booking</div>
+      <p class="portal-copy">Check your status, pay what's due, or request a change any time from your customer portal.</p>
+      <a id="portalLink" class="button portal-btn" href="#" target="_blank" rel="noopener">Go to your booking portal</a>
+    </div>
     <div class="actions">
       <a class="button primary" href="/">Return to Hibiscus Studio</a>
       <a class="button secondary" href="/book/">Book another event</a>
@@ -114,6 +143,7 @@
   <script>
     const params = new URLSearchParams(window.location.search);
     const bookingId = params.get('booking_id');
+    const email = params.get('email');
     const sessionId = params.get('session_id');
     const refEl = document.getElementById('bookingRef');
 
@@ -123,6 +153,15 @@
       refEl.textContent = 'Payment confirmed';
     } else {
       refEl.textContent = 'Payment confirmed';
+    }
+
+    // Show the customer portal link (needs a booking reference to link to).
+    if (bookingId) {
+      const portalBox = document.getElementById('portalBox');
+      const portalLink = document.getElementById('portalLink');
+      portalLink.href = 'https://hibiscusstudio.co.uk/portal/?ref=' + encodeURIComponent(bookingId)
+        + (email ? '&email=' + encodeURIComponent(email) : '');
+      portalBox.style.display = 'block';
     }
   </script>
 </body>
