@@ -248,6 +248,31 @@
         gap: 14px;
       }
 
+      .discount-line {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding: 12px 16px;
+        border: 1px solid rgba(107, 143, 107, 0.35);
+        border-radius: var(--radius);
+        background: var(--sage-bg);
+        color: var(--ink-2);
+        font-size: 0.85rem;
+      }
+
+      .discount-line .discount-amount {
+        font-weight: 700;
+        color: var(--sage);
+      }
+
+      .discount-line .discount-original {
+        text-decoration: line-through;
+        color: var(--muted);
+        font-weight: 400;
+      }
+
       .stage {
         border: 1px solid var(--border);
         border-radius: var(--radius);
@@ -603,6 +628,7 @@
               <h2>Payment summary</h2>
               <span id="totalDue" class="total-due">£0.00</span>
             </div>
+            <div id="discountLine" class="discount-line hidden"></div>
             <div id="stages" class="stage-stack"></div>
           </section>
 
@@ -655,7 +681,7 @@
     </div>
 
     <script>
-      const WORKER_URL = 'https://hb-booking.hibiscusstudiouk.workers.dev';
+      const WORKER_URL = 'http://localhost:8787';
       const params = new URLSearchParams(window.location.search);
       const initialRef = (params.get('ref') || '').trim();
       const initialEmail = (params.get('email') || '').trim();
@@ -672,6 +698,7 @@
       const detailEventType = document.getElementById('detailEventType');
       const detailReference = document.getElementById('detailReference');
       const totalDue = document.getElementById('totalDue');
+      const discountLine = document.getElementById('discountLine');
       const stagesHost = document.getElementById('stages');
       const supportEmail = document.getElementById('supportEmail');
       const clearButton = document.getElementById('clearLookup');
@@ -802,6 +829,26 @@
         currentBookingDuration = Number(data.details.duration) || 6;
         currentBookingDate = data.details.date || '';
         totalDue.textContent = money(data.hireTotal || 0);
+
+        if (data.discount && data.discount.discountAmount > 0) {
+          discountLine.classList.remove('hidden');
+          discountLine.innerHTML = '';
+          const label = document.createElement('span');
+          label.textContent = `Discount — ${data.discount.label || data.discount.code} (${data.discount.discount}% off)`;
+          const amount = document.createElement('span');
+          amount.className = 'discount-amount';
+          amount.textContent = `−${money(data.discount.discountAmount)}`;
+          if (data.discount.originalHireTotal) {
+            const original = document.createElement('span');
+            original.className = 'discount-original';
+            original.textContent = `was ${money(data.discount.originalHireTotal)}`;
+            amount.append(' ', original);
+          }
+          discountLine.append(label, amount);
+        } else {
+          discountLine.classList.add('hidden');
+          discountLine.innerHTML = '';
+        }
 
         if (Array.isArray(data.stages) && data.stages.length) {
           stagesHost.innerHTML = data.stages.map((stage) => renderStage(stage, data.bankDetails, data.details.reference || bookingRefInput.value.trim())).join('');

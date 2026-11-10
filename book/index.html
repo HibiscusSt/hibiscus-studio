@@ -2172,6 +2172,22 @@
             <span class="input-check" id="checkPhone">✓</span>
         </div>
 
+        <!-- Discount code (optional) -->
+        <div class="form-group" id="discountGroup">
+            <label class="form-label">Discount code <span style="color:var(--text-muted); font-weight:400;">(optional)</span></label>
+            <input type="text" class="form-input" id="inputDiscountCode" placeholder="e.g. BLACKFRIDAY15" autocomplete="off" style="text-transform:uppercase;" oninput="onDiscountCodeInput()">
+            <div id="discountPreview" style="display:none; margin-top:8px; font-size:0.82rem; padding:10px 12px; border-radius:10px;"></div>
+            <div id="discountPostcodeWrap" style="display:none; margin-top:12px;">
+                <label class="form-label">Your postcode</label>
+                <input type="text" class="form-input" id="inputPostcode" placeholder="e.g. E16 1DP" autocomplete="postal-code" oninput="onDiscountCodeInput()">
+            </div>
+            <div id="discountProofWrap" style="display:none; margin-top:12px;">
+                <label class="form-label">Proof of address</label>
+                <input type="file" id="inputProof" accept="image/*,application/pdf" onchange="onProofFileChange(this)" style="font-size:0.8rem; color:var(--text-secondary);">
+                <p id="proofHint" style="font-size:0.72rem; color:var(--text-muted); margin-top:6px; line-height:1.5;">A utility bill, council tax letter or bank statement dated within the last 3 months, showing your name and an E16 address. Max 5MB.</p>
+            </div>
+        </div>
+
         <!-- Cloudflare Turnstile (invisible bot protection) -->
         <div id="turnstile-widget"></div>
 
@@ -2257,6 +2273,10 @@
                 <div style="display:flex; justify-content:space-between; gap:12px;">
                     <span>Extras</span>
                     <span id="summaryExtrasTotal">£0</span>
+                </div>
+                <div style="display:none; justify-content:space-between; gap:12px;" id="summaryDiscountRow">
+                    <span id="summaryDiscountLabel" style="color:var(--success);">Discount</span>
+                    <span id="summaryDiscountAmount" style="color:var(--success);">£0</span>
                 </div>
                 <div style="display:flex; justify-content:space-between; gap:12px; padding-top:8px; border-top:1px solid var(--border-color);">
                     <span style="color:var(--text-primary); font-weight:600;">Subtotal</span>
@@ -2371,6 +2391,10 @@
                 <div class="summary-row">
                     <span class="summary-label">Hire subtotal</span>
                     <span class="summary-value" id="receiptSubtotal">£0</span>
+                </div>
+                <div class="summary-row" id="receiptDiscountRow" style="display:none;">
+                    <span class="summary-label" id="receiptDiscountLabel">Discount</span>
+                    <span class="summary-value" id="receiptDiscountAmount" style="color:var(--success);">£0</span>
                 </div>
                 <div class="summary-row">
                     <span class="summary-label">Reservation fee paid</span>
@@ -2515,6 +2539,11 @@
         var selectedTimeLabel = null;
         var selectedGuests = null;
         var isViewing = false;
+
+        // Discount code state
+        var discountValidation = null;   // { valid, discount, label, requiresProof, message, reason }
+        var discountProofFile = null;    // { filename, contentType, data (base64) }
+        var discountValidateTimer = null;
 
         var eventTypeLabels = {
             'bridal': 'Bridal Party',
@@ -3814,17 +3843,142 @@
             const basePrice = pricing[selectedDuration]?.price || selectedDurationPrice || 465;
             const isWeekend = selectedDateObj && ['Sat', 'Sun'].includes(selectedDateObj.day);
             const weekendPremium = isWeekend ? Math.round(basePrice * 0.1 * 100) / 100 : 0;
-            const subtotal = basePrice + weekendPremium + extrasTotal;
+            // Venue hire fee excluding extras — the discount applies to this only
+            // (matches the backend's hireFeeBase / applyDiscountToPricing).
+            const hireFeeBase = basePrice + weekendPremium;
+            const subtotal = hireFeeBase + extrasTotal;
             const deposit = Math.round(subtotal * 0.5 * 100) / 100;
             const remaining = Math.round((subtotal - deposit) * 100) / 100;
+
+            // Apply the validated discount to the venue hire fee only.
+            let discountAmount = 0;
+            let discountedSubtotal = subtotal;
+            let discountedDeposit = deposit;
+            let discountedRemaining = remaining;
+            if (discountValidation && discountValidation.valid && discountValidation.discount > 0) {
+                // discount is a percentage (15 = 15%), so the amount off is hireFeeBase * discount / 100.
+                discountAmount = Math.round(hireFeeBase * discountValidation.discount / 100 * 100) / 100;
+                discountedSubtotal = Math.round((subtotal - discountAmount) * 100) / 100;
+                discountedDeposit = Math.round(discountedSubtotal * 0.5 * 100) / 100;
+                discountedRemaining = Math.round((discountedSubtotal - discountedDeposit) * 100) / 100;
+            }
 
             return {
                 basePrice,
                 weekendPremium,
+                hireFeeBase,
                 subtotal,
                 deposit,
-                remaining
+                remaining,
+                discountAmount,
+                discountedSubtotal,
+                discountedDeposit,
+                discountedRemaining
             };
+        }
+
+        // ── Discount code ──
+        function onDiscountCodeInput() {
+            const code = (document.getElementById('inputDiscountCode').value || '').trim();
+            const preview = document.getElementById('discountPreview');
+            const postcodeWrap = document.getElementById('discountPostcodeWrap');
+            const proofWrap = document.getElementById('discountProofWrap');
+
+            if (!code) {
+                discountValidation = null;
+                discountProofFile = null;
+                preview.style.display = 'none';
+                postcodeWrap.style.display = 'none';
+                proofWrap.style.display = 'none';
+                updateSummary();
+                return;
+            }
+
+            if (discountValidateTimer) clearTimeout(discountValidateTimer);
+            discountValidateTimer = setTimeout(function () { validateDiscount(); }, 500);
+        }
+
+        function validateDiscount() {
+            const code = (document.getElementById('inputDiscountCode').value || '').trim();
+            if (!code) return;
+            const postcode = (document.getElementById('inputPostcode').value || '').trim();
+
+            fetch(`${HBS_BACKEND_URL}/api/discount/validate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    code: code,
+                    eventType: selectedEventType,
+                    date: selectedDate,
+                    postcode: postcode,
+                    proofUploaded: !!discountProofFile
+                })
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                discountValidation = res;
+                renderDiscountPreview(res);
+                updateSummary();
+            })
+            .catch(function () {
+                discountValidation = null;
+                const preview = document.getElementById('discountPreview');
+                preview.style.display = 'block';
+                preview.style.background = 'var(--danger-soft)';
+                preview.style.border = '1px solid var(--danger-border)';
+                preview.style.color = 'var(--danger)';
+                preview.textContent = 'Could not check that code. Please try again.';
+                updateSummary();
+            });
+        }
+
+        function renderDiscountPreview(res) {
+            const preview = document.getElementById('discountPreview');
+            const postcodeWrap = document.getElementById('discountPostcodeWrap');
+            const proofWrap = document.getElementById('discountProofWrap');
+            preview.style.display = 'block';
+
+            // Show postcode/proof fields whenever the code requires proof, even
+            // while validation is still failing (e.g. postcode not entered yet).
+            const needsProof = !!res.requiresProof;
+            postcodeWrap.style.display = needsProof ? 'block' : 'none';
+            proofWrap.style.display = needsProof ? 'block' : 'none';
+
+            if (res.valid) {
+                preview.style.background = 'var(--success-soft)';
+                preview.style.border = '1px solid var(--success-border)';
+                preview.style.color = 'var(--success)';
+                preview.textContent = res.message || 'Discount applied';
+            } else {
+                preview.style.background = 'var(--danger-soft)';
+                preview.style.border = '1px solid var(--danger-border)';
+                preview.style.color = 'var(--danger)';
+                preview.textContent = res.message || 'That code is not valid.';
+            }
+        }
+
+        function onProofFileChange(input) {
+            const file = input.files && input.files[0];
+            if (!file) { discountProofFile = null; return; }
+            if (file.size > 5 * 1024 * 1024) {
+                alert('That file is too large. Please upload a file under 5MB.');
+                input.value = '';
+                discountProofFile = null;
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function () {
+                const dataUrl = reader.result;
+                const base64 = String(dataUrl).split(',')[1] || '';
+                discountProofFile = {
+                    filename: file.name,
+                    contentType: file.type || 'application/octet-stream',
+                    data: base64
+                };
+                const code = (document.getElementById('inputDiscountCode').value || '').trim();
+                if (code) validateDiscount();
+            };
+            reader.readAsDataURL(file);
         }
 
         function updateSummary() {
@@ -3846,9 +4000,21 @@
             document.getElementById('summaryHireSubtotal').textContent = `£${(quote.basePrice + quote.weekendPremium).toFixed(2)}`;
             document.getElementById('summaryWeekendPremium').textContent = `£${quote.weekendPremium.toFixed(2)}`;
             document.getElementById('summaryExtrasTotal').textContent = `£${extrasTotal.toFixed(2)}`;
-            document.getElementById('summarySubtotal').textContent = `£${quote.subtotal.toFixed(2)}`;
-            document.getElementById('summaryReservationFee').textContent = `£${quote.deposit.toFixed(2)}`;
-            document.getElementById('summaryRemainingBalance').textContent = `£${quote.remaining.toFixed(2)} remaining balance will be emailed to you after booking`;
+
+            // Discount row (venue hire fee only)
+            const discountRow = document.getElementById('summaryDiscountRow');
+            if (quote.discountAmount > 0) {
+                discountRow.style.display = 'flex';
+                document.getElementById('summaryDiscountLabel').textContent =
+                    `Discount — ${discountValidation.label || discountValidation.code || 'code'} (${discountValidation.discount}%)`;
+                document.getElementById('summaryDiscountAmount').textContent = `−£${quote.discountAmount.toFixed(2)}`;
+            } else {
+                discountRow.style.display = 'none';
+            }
+
+            document.getElementById('summarySubtotal').textContent = `£${quote.discountedSubtotal.toFixed(2)}`;
+            document.getElementById('summaryReservationFee').textContent = `£${quote.discountedDeposit.toFixed(2)}`;
+            document.getElementById('summaryRemainingBalance').textContent = `£${quote.discountedRemaining.toFixed(2)} remaining balance will be emailed to you after booking`;
 
             updateDepositAmount();
 
@@ -3895,6 +4061,7 @@
                 btn.textContent = 'Processing...';
             }
 
+            const discountCode = (document.getElementById('inputDiscountCode').value || '').trim();
             const bookingPayload = {
                 name: document.getElementById('inputName').value.trim(),
                 email: document.getElementById('inputEmail').value.trim(),
@@ -3905,7 +4072,10 @@
                 duration: Number(selectedDuration),
                 startTime: selectedTimeStart,
                 endTime: selectedTimeEnd,
-                notes: ''
+                notes: '',
+                discountCode: discountCode || undefined,
+                postcode: (document.getElementById('inputPostcode').value || '').trim() || undefined,
+                proofOfAddress: discountProofFile || undefined
             };
 
             fetch(`${HBS_BACKEND_URL}/api/bookings`, {
@@ -3934,12 +4104,26 @@
                 document.getElementById('receiptTime').textContent = `${formatTime(selectedTimeStart)} → ${formatTime(selectedTimeEnd)} (${selectedDuration}hrs)`;
 
                 const quote = calculateReservationQuote();
+                // Prefer the backend's authoritative totals (they include any discount).
+                const backendHireTotal = (data && (data.hireTotal ?? data.total));
                 const backendDeposit = (data && (data.hireDeposit ?? data.deposit));
-                const paidDeposit = backendDeposit ?? quote.deposit;
-                const remainingBalance = quote.subtotal - paidDeposit;
-                document.getElementById('receiptSubtotal').textContent = `£${quote.subtotal.toFixed(2)}`;
+                const paidDeposit = backendDeposit ?? quote.discountedDeposit;
+                const hireTotal = backendHireTotal ?? quote.discountedSubtotal;
+                const remainingBalance = Math.round((hireTotal - paidDeposit) * 100) / 100;
+                document.getElementById('receiptSubtotal').textContent = `£${hireTotal.toFixed(2)}`;
                 document.getElementById('receiptDeposit').textContent = `£${paidDeposit.toFixed(2)}`;
                 document.getElementById('receiptRemainingBalance').textContent = `£${remainingBalance.toFixed(2)}`;
+
+                // Show the discount line if the backend applied one.
+                const discountRow = document.getElementById('receiptDiscountRow');
+                if (data && data.discount && data.discount.discountAmount > 0) {
+                    discountRow.style.display = 'flex';
+                    document.getElementById('receiptDiscountLabel').textContent =
+                        `Discount — ${data.discount.label || data.discount.code} (${data.discount.discount}%)`;
+                    document.getElementById('receiptDiscountAmount').textContent = `−£${data.discount.discountAmount.toFixed(2)}`;
+                } else {
+                    discountRow.style.display = 'none';
+                }
 
                 const successMessage = document.querySelector('#step9 .confirm-text');
                 if (successMessage) {
@@ -4044,8 +4228,8 @@
 
         function updateDepositAmount() {
             const quote = calculateReservationQuote();
-            const deposit = quote.deposit;
-            const remaining = quote.remaining;
+            const deposit = quote.discountedDeposit;
+            const remaining = quote.discountedRemaining;
 
             const amountEl = document.querySelector('.deposit-info .amount');
             const noteEl = document.querySelector('.deposit-info .note');
@@ -4063,9 +4247,9 @@
             if (hireSubtotalEl) hireSubtotalEl.textContent = `£${(quote.basePrice + quote.weekendPremium).toFixed(2)}`;
             if (weekendPremiumEl) weekendPremiumEl.textContent = `£${quote.weekendPremium.toFixed(2)}`;
             if (extrasTotalEl) extrasTotalEl.textContent = `£${extrasTotal.toFixed(2)}`;
-            if (subtotalEl) subtotalEl.textContent = `£${quote.subtotal.toFixed(2)}`;
-            if (reservationFeeEl) reservationFeeEl.textContent = `£${quote.deposit.toFixed(2)}`;
-            if (remainingBalanceEl) remainingBalanceEl.textContent = `£${quote.remaining.toFixed(2)} remaining balance will be emailed to you after booking`;
+            if (subtotalEl) subtotalEl.textContent = `£${quote.discountedSubtotal.toFixed(2)}`;
+            if (reservationFeeEl) reservationFeeEl.textContent = `£${quote.discountedDeposit.toFixed(2)}`;
+            if (remainingBalanceEl) remainingBalanceEl.textContent = `£${quote.discountedRemaining.toFixed(2)} remaining balance will be emailed to you after booking`;
         }
 
         function startOver() {
@@ -4084,6 +4268,15 @@
             isViewing = false;
             selectedExtras = {};
             extrasTotal = 0;
+            discountValidation = null;
+            discountProofFile = null;
+            if (discountValidateTimer) { clearTimeout(discountValidateTimer); discountValidateTimer = null; }
+            const discountPreview = document.getElementById('discountPreview');
+            if (discountPreview) discountPreview.style.display = 'none';
+            const postcodeWrap = document.getElementById('discountPostcodeWrap');
+            if (postcodeWrap) postcodeWrap.style.display = 'none';
+            const proofWrap = document.getElementById('discountProofWrap');
+            if (proofWrap) proofWrap.style.display = 'none';
 
             // Reset UI
             document.querySelectorAll('.choice-card, .date-card, .time-slot, .guest-btn, .extra-option, .duration-card').forEach(el => {
@@ -4136,6 +4329,18 @@
 
         // Submit with Turnstile verification (with timeout fallback)
         function submitWithTurnstile() {
+            // Block review if a discount code is present but not (yet) validated OK.
+            const discountCode = (document.getElementById('inputDiscountCode').value || '').trim();
+            if (discountCode) {
+                if (!discountValidation) {
+                    alert('Please wait a moment while we check your discount code.');
+                    return;
+                }
+                if (!discountValidation.valid) {
+                    alert(discountValidation.message || 'That discount code is not valid.');
+                    return;
+                }
+            }
             if (window.turnstileToken || window.turnstileFailed) {
                 // Token verified or Turnstile unavailable — proceed to review
                 goToStep(8);
