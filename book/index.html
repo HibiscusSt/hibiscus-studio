@@ -2967,7 +2967,7 @@
                         const response = await fetch(`https://hb-booking.hibiscusstudiouk.workers.dev/api/availability?date=${d.date}`);
                         const data = await response.json();
                         const hasAvailableSlot = data.slots?.some(slot => slot.available);
-                        return { ...d, hasAvailableSlot };
+                        return { ...d, hasAvailableSlot, blocked: !!data.blocked };
                     } catch (err) {
                         return { ...d, hasAvailableSlot: false };
                     }
@@ -3000,8 +3000,9 @@
             let available = checked.filter(d => d.hasAvailableSlot);
 
             // Fail-open: if API says ALL unavailable, calendar likely not configured — show all
+            // (but never show dates the venue has explicitly blocked)
             if (available.length === 0 && dates.length > 0) {
-                available = dates;
+                available = checked.filter(d => !d.blocked);
             }
             if (available.length === 0) {
                 renderEmptyState('dateCards', dayLabel);
