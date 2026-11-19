@@ -140,12 +140,18 @@
     </div>
   </div>
 
+  <script src="/welcome-guide.js"></script>
   <script>
     const params = new URLSearchParams(window.location.search);
     const bookingId = params.get('booking_id');
     const email = params.get('email');
     const sessionId = params.get('session_id');
     const refEl = document.getElementById('bookingRef');
+
+    // Show the welcome guide popup once the client has booked and paid.
+    if (typeof window.showWelcomeGuide === 'function') {
+      window.showWelcomeGuide();
+    }
 
     if (bookingId) {
       refEl.textContent = 'Booking reference: ' + bookingId;

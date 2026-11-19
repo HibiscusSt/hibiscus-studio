@@ -550,114 +550,6 @@
         color: var(--danger);
       }
 
-      .guide-section {
-        margin-top: 26px;
-        border-top: 1px solid var(--border);
-        padding-top: 24px;
-      }
-
-      .guide-toggle {
-        border: 1px solid var(--border);
-        background: transparent;
-        color: var(--ink);
-        border-radius: 999px;
-        padding: 9px 14px;
-        font: inherit;
-        font-size: 0.8rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background 0.15s ease, border-color 0.15s ease;
-      }
-
-      .guide-toggle:hover {
-        background: var(--rose-soft);
-        border-color: rgba(190, 77, 94, 0.3);
-      }
-
-      .guide-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 14px;
-        margin-top: 18px;
-      }
-
-      .guide-card {
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        padding: 18px;
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent);
-      }
-
-      .guide-card-title {
-        margin: 0 0 10px;
-        font-family: 'Instrument Serif', Georgia, serif;
-        font-size: 1.35rem;
-        font-weight: 400;
-        color: var(--ink);
-      }
-
-      .guide-card-body {
-        color: var(--ink-2);
-        font-size: 0.9rem;
-        line-height: 1.6;
-      }
-
-      .guide-card-body p {
-        margin: 0 0 10px;
-      }
-
-      .guide-card-body p:last-child {
-        margin-bottom: 0;
-      }
-
-      .guide-card-body ul {
-        margin: 0 0 10px;
-        padding-left: 18px;
-      }
-
-      .guide-card-body ul:last-child {
-        margin-bottom: 0;
-      }
-
-      .guide-card-body li {
-        margin-bottom: 6px;
-      }
-
-      .guide-card-body li:last-child {
-        margin-bottom: 0;
-      }
-
-      .guide-card-body li strong {
-        color: var(--ink);
-      }
-
-      .guide-note {
-        margin-top: 12px;
-        padding: 10px 12px;
-        border-radius: 12px;
-        background: var(--amber-bg);
-        color: var(--ink-2);
-        font-size: 0.85rem;
-        line-height: 1.5;
-      }
-
-      .guide-contact {
-        margin-top: 12px;
-        padding: 12px 14px;
-        border-radius: 12px;
-        background: var(--rose-soft);
-        color: var(--ink-2);
-        font-size: 0.85rem;
-        line-height: 1.5;
-      }
-
-      .guide-contact strong {
-        display: block;
-        margin: 2px 0;
-        color: var(--rose);
-        font-size: 1.05rem;
-      }
-
       @media (max-width: 640px) {
         .panel {
           padding: 22px 16px 18px;
@@ -779,137 +671,6 @@
               <div id="requestHistory" class="request-history"></div>
             </form>
           </section>
-
-          <section class="summary guide-section" aria-labelledby="guideHeading">
-            <div class="summary-header">
-              <h2 id="guideHeading">Welcome guide</h2>
-              <button class="guide-toggle" id="guideToggle" type="button" aria-expanded="true" aria-controls="guidePanel">Hide welcome guide</button>
-            </div>
-            <p class="subtitle">Everything you need to know about your visit &mdash; arrival, what's included, the studio rules, and how to leave the space ready for the next guest.</p>
-            <div id="guidePanel" class="guide-grid">
-
-              <article class="guide-card">
-                <h3 class="guide-card-title">Arrival &amp; access</h3>
-                <div class="guide-card-body">
-                  <p>Your studio assistant will be on site at the start of your booking. Please check in with them within the first 30 minutes and complete a brief walkthrough of the space together. The walkthrough confirms the condition of the venue before your event begins &mdash; it protects you and ensures everything is ready.</p>
-                  <p>As the lead booker, you are responsible for the condition of the space and the behaviour of all guests you bring into the studio.</p>
-                  <p>If you are working with decorators, photographers, caterers or stylists:</p>
-                  <ul>
-                    <li><strong>Let us know before your event</strong> &mdash; all vendors must be declared ahead of your booking date.</li>
-                    <li><strong>No early access</strong> &mdash; vendors must arrive at the start of your booked time, under any circumstances.</li>
-                    <li><strong>Respectful conduct required</strong> &mdash; pressuring behaviour about early access will not be tolerated.</li>
-                    <li><strong>All decor cleared before your booking ends</strong> &mdash; vendor setup and breakdown is your responsibility as the lead booker.</li>
-                  </ul>
-                  <div class="guide-contact">
-                    <span>Contact during your booking</span>
-                    <strong>07984 051064</strong>
-                    <span>Call us if you need anything during your hire.</span>
-                  </div>
-                </div>
-              </article>
-
-              <article class="guide-card">
-                <h3 class="guide-card-title">What's included</h3>
-                <div class="guide-card-body">
-                  <p>Every hire includes exclusive use of the full studio, plus:</p>
-                  <ul>
-                    <li>Approx 1,000 sq ft blank canvas</li>
-                    <li>40 chairs and 10 tables</li>
-                    <li>High-speed WiFi and a Bluetooth speaker</li>
-                    <li>Private facilities</li>
-                    <li>2 bin bags and light cleaning products</li>
-                    <li>Feminine hygiene products in the facilities</li>
-                  </ul>
-                  <p>Please bring your own:</p>
-                  <ul>
-                    <li>Decorations, tablecloths and linens</li>
-                    <li>Glassware and catering supplies</li>
-                    <li>Additional rubbish bags</li>
-                  </ul>
-                </div>
-              </article>
-
-              <article class="guide-card">
-                <h3 class="guide-card-title">Venue rules</h3>
-                <div class="guide-card-body">
-                  <ul>
-                    <li><strong>Walls and surfaces.</strong> No tape, Blu Tack, adhesive hooks, nails or screws on any walls or surfaces.</li>
-                    <li><strong>Floors.</strong> Tables must be lifted, not dragged. Protect the floor from paint, dye, food colouring and staining materials.</li>
-                    <li><strong>Candles.</strong> Permitted in glass holders only. Open flames are not allowed.</li>
-                    <li><strong>Confetti and glitter.</strong> Permitted but must be fully cleaned before departure.</li>
-                    <li><strong>CCTV.</strong> The studio and entrance are monitored by CCTV at all times.</li>
-                    <li><strong>Rubbish.</strong> Bags must be ready and placed by the door 30 minutes before your booking ends. Rubbish found outside the studio or in other bins results in a &pound;50 deduction from your deposit.</li>
-                  </ul>
-                  <p>Music &amp; sound:</p>
-                  <ul>
-                    <li>All music and sound must finish by <strong>10:00 PM</strong>. No exceptions.</li>
-                    <li><strong>DJs are welcome</strong> &mdash; a supervision fee of &pound;95 applies and must be paid in advance.</li>
-                    <li>DJs must bring their own speakers and PA system; the studio Bluetooth speaker is not available for DJ use.</li>
-                    <li>Sound levels must remain considerate of the surrounding building and neighbourhood at all times.</li>
-                  </ul>
-                </div>
-              </article>
-
-              <article class="guide-card">
-                <h3 class="guide-card-title">Kitchen</h3>
-                <div class="guide-card-body">
-                  <p>The kitchen is fully equipped with appliances:</p>
-                  <ul>
-                    <li>5-hob induction stove</li>
-                    <li>Double oven and microwave</li>
-                    <li>Fridge</li>
-                    <li>Kettle and toaster</li>
-                    <li>Sink</li>
-                  </ul>
-                  <p>We do not supply cooking utensils, pots and pans, plates and cutlery, ingredients, or washing up liquid &mdash; please bring your own.</p>
-                  <div class="guide-note">Outside catering is welcome. Deep fat fryers are not permitted.</div>
-                </div>
-              </article>
-
-              <article class="guide-card">
-                <h3 class="guide-card-title">Parking</h3>
-                <div class="guide-card-body">
-                  <p>Street parking is available on nearby roads. Please check signage for any restrictions before leaving your vehicle.</p>
-                  <ul>
-                    <li><strong>Peto Street North</strong> &mdash; drop off &amp; unloading only</li>
-                    <li><strong>Caxton Street North</strong> &mdash; parking available</li>
-                    <li><strong>Heartwell Avenue</strong> &mdash; parking available</li>
-                    <li><strong>Hoy Street</strong> &mdash; parking available</li>
-                    <li><strong>Fen Street</strong> &mdash; parking available</li>
-                  </ul>
-                  <div class="guide-note">Free parking after 6:30 PM and all day on Sundays.</div>
-                </div>
-              </article>
-
-              <article class="guide-card">
-                <h3 class="guide-card-title">Timings &amp; pack-down</h3>
-                <div class="guide-card-body">
-                  <ul>
-                    <li><strong>Setup and pack-down</strong> are included within your booked time. Please plan your day accordingly.</li>
-                    <li><strong>A 10-minute grace period</strong> applies at the end of your booking. After this, a late fee of &pound;50 per 30 minutes applies.</li>
-                    <li><strong>Additional hours</strong> can be requested subject to availability at &pound;100 per hour.</li>
-                  </ul>
-                  <p>Before you go, please:</p>
-                  <ul>
-                    <li>Ask guests not to gather outside once your booking has ended, and keep noise to a minimum on arrival and departure.</li>
-                    <li>Empty remaining liquids, double-bag heavy rubbish, and place all tied bags in the collection area 30 minutes before your booking ends.</li>
-                    <li>Wipe down tables, worktops and kitchen surfaces, and sweep and mop the floor (hoover, mop, bucket and cleaning supplies are provided).</li>
-                    <li>Return all furniture to its original position, remove all decor and vendor items, and switch off the speaker.</li>
-                    <li>Let your studio assistant know you are ready to leave so the inspection can begin.</li>
-                  </ul>
-                </div>
-              </article>
-
-              <article class="guide-card">
-                <h3 class="guide-card-title">Deposit return</h3>
-                <div class="guide-card-body">
-                  <p>Your &pound;200 damages deposit is returned within 1&ndash;3 working days following inspection of the studio.</p>
-                  <div class="guide-note">Please leave the studio in the same clean and tidy condition in which it was found. Damage beyond normal use, or rubbish left outside the studio, may result in a deduction from your deposit.</div>
-                </div>
-              </article>
-
-            </div>
-          </section>
         </div>
 
         <p id="supportCopy" class="support">
@@ -919,6 +680,7 @@
       </main>
     </div>
 
+    <script src="/welcome-guide.js"></script>
     <script>
       const WORKER_URL = 'https://hb-booking.hibiscusstudiouk.workers.dev';
       const params = new URLSearchParams(window.location.search);
@@ -955,6 +717,7 @@
       let currentBookingDuration = 6;
       let currentBookingDate = '';
       let currentClientRequests = [];
+      let welcomeGuideShown = false;
 
       const money = (value) =>
         new Intl.NumberFormat('en-GB', {
@@ -985,17 +748,6 @@
         const nextTheme = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
         setTheme(nextTheme);
       });
-
-      const guideToggle = document.getElementById('guideToggle');
-      const guidePanel = document.getElementById('guidePanel');
-      if (guideToggle && guidePanel) {
-        guideToggle.addEventListener('click', () => {
-          const isOpen = guidePanel.hidden === false;
-          guidePanel.hidden = isOpen;
-          guideToggle.setAttribute('aria-expanded', String(!isOpen));
-          guideToggle.textContent = isOpen ? 'Show welcome guide' : 'Hide welcome guide';
-        });
-      }
 
       const badgeClassByStatus = (statusText) => {
         if (!statusText) return 'status-pending';
@@ -1071,6 +823,13 @@
         statusCopy.textContent = 'Your current booking status and payment schedule are shown below.';
         bookingDetails.classList.remove('hidden');
         lookupForm.classList.add('hidden');
+
+        // Show the welcome guide popup the first time the client's booking is
+        // revealed (after they enter their reference + email).
+        if (!welcomeGuideShown && typeof window.showWelcomeGuide === 'function') {
+          welcomeGuideShown = true;
+          window.showWelcomeGuide();
+        }
 
         detailDate.textContent = data.details.date ? formatDate(`${data.details.date}T00:00:00`) : '—';
         detailTime.textContent = data.details.time || '—';
