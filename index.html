@@ -88,6 +88,20 @@
             .hero-carousel { width: 220px; border-radius: 14px; }
         }
 
+        /* Virtual tour */
+        .tour-frame { position: relative; max-width: 960px; margin: 0 auto; border-radius: 24px; overflow: hidden; background: #000; border: 1px solid var(--border); box-shadow: var(--shadow-lg); aspect-ratio: 16 / 9; }
+        @media (max-width: 768px) { .tour-frame { aspect-ratio: 16 / 10; border-radius: 16px; } }
+        .tour-frame video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
+        .tour-play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.28); border: none; cursor: pointer; transition: background 0.25s ease; z-index: 2; padding: 0; }
+        .tour-play:hover { background: rgba(0,0,0,0.42); }
+        .tour-play .tour-play-btn { width: 76px; height: 76px; border-radius: 50%; background: rgba(255,255,255,0.94); display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 30px rgba(0,0,0,0.35); transition: transform 0.2s ease; }
+        .tour-play:hover .tour-play-btn { transform: scale(1.06); }
+        .tour-play .tour-play-btn svg { margin-left: 4px; color: var(--ink); }
+        .tour-play .tour-label { position: absolute; bottom: 18px; left: 0; right: 0; text-align: center; color: #fff; font-size: 0.85rem; font-weight: 500; letter-spacing: 0.04em; text-shadow: 0 1px 8px rgba(0,0,0,0.6); }
+        .tour-frame.playing .tour-play { display: none; }
+        .tour-close { position: absolute; top: 12px; right: 12px; z-index: 3; width: 40px; height: 40px; border-radius: 50%; border: none; background: rgba(0,0,0,0.55); color: #fff; font-size: 22px; line-height: 1; cursor: pointer; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+        .tour-frame.playing .tour-close { display: flex; }
+
         .scroll-indicator { text-align: center; padding: 32px 0 0; }
         .scroll-indicator span { display: inline-flex; flex-direction: column; align-items: center; gap: 8px; color: var(--muted); font-size: 0.8rem; font-weight: 500; letter-spacing: 0.06em; cursor: pointer; transition: color 0.2s; }
         .scroll-indicator span:hover { color: var(--ink2); }
@@ -315,6 +329,28 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ========== 1b. VIRTUAL TOUR ========== -->
+<section id="tourSection">
+    <div class="container-wide">
+        <h2 class="reveal">Take a virtual tour</h2>
+        <p class="section-intro reveal">Step inside before you enquire. A quick look around the studio so you can picture your event here.</p>
+        <div class="tour-frame reveal" id="tourFrame">
+            <video id="tourVideo" preload="metadata" playsinline>
+                <source src="venue-tour.mp4" type="video/mp4">
+            </video>
+            <button class="tour-play" id="tourPlay" aria-label="Play virtual tour">
+                <span class="tour-play-btn">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                </span>
+                <span class="tour-label">Play the tour</span>
+            </button>
+            <button class="tour-close" id="tourClose" aria-label="Close tour">&times;</button>
         </div>
     </div>
 </section>
@@ -864,6 +900,32 @@
                 goTo(dx > 0 ? current + 1 : current - 1);
             }
         });
+    })();
+
+    // Virtual tour player
+    (function() {
+        var frame = document.getElementById('tourFrame');
+        var video = document.getElementById('tourVideo');
+        var playBtn = document.getElementById('tourPlay');
+        var closeBtn = document.getElementById('tourClose');
+        if (!frame || !video) return;
+
+        function startTour() {
+            video.controls = true;
+            frame.classList.add('playing');
+            var p = video.play();
+            if (p && p.catch) p.catch(function() {});
+        }
+        function stopTour() {
+            video.pause();
+            video.controls = false;
+            try { video.currentTime = 0; } catch (e) {}
+            frame.classList.remove('playing');
+        }
+
+        playBtn.addEventListener('click', startTour);
+        closeBtn.addEventListener('click', stopTour);
+        video.addEventListener('ended', stopTour);
     })();
 </script>
 
